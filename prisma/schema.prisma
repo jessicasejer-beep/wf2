@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  name        String
+  role        String    @default("PUBLISHER")
+  publisherId String?
+  publisher   Publisher? @relation(fields: [publisherId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Publisher {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logo        String?
+  color       String   @default("#00647D")
+  description String?
+  users       User[]
+  sites       Site[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("publishers")
+}
+
+model Site {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  slug        String   @unique
+  discipline  String?
+  ean         String?
+  cover       String?
+  description String?
+  status      String   @default("DRAFT")
+  publisherId String
+  publisher   Publisher @relation(fields: [publisherId], references: [id])
+  cahiers     Cahier[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("sites")
+}
+
+model Cahier {
+  id        String    @id @default(cuid())
+  title     String
+  order     Int       @default(0)
+  siteId    String
+  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  periodes  Periode[]
+  createdAt DateTime  @default(now())
+
+  @@map("cahiers")
+}
+
+model Periode {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int      @default(0)
+  cahierId  String
+  cahier    Cahier   @relation(fields: [cahierId], references: [id], onDelete: Cascade)
+  lecons    Lecon[]
+  createdAt DateTime @default(now())
+
+  @@map("periodes")
+}
+
+model Lecon {
+  id        String     @id @default(cuid())
+  title     String
+  order     Int        @default(0)
+  periodeId String
+  periode   Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  resources Resource[]
+  createdAt DateTime   @default(now())
+
+  @@map("lecons")
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  type        String   @default("AUTRE")
+  accessLevel String   @default("LIBRE")
+  fileUrl     String?
+  fileName    String?
+  fileSize    Int?
+  filePages   Int?
+  leconId     String
+  lecon       Lecon    @relation(fields: [leconId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resources")
+}
