@@ -508,6 +508,11 @@ function normText(v) {
 function normCell(c, v) { return COLS[c].file ? normFile(v) : normText(v); }
 function isRowEmpty(r) { for (let c = 0; c < UUID; c++) if (String(r[c] == null ? '' : r[c]).trim() !== '') return false; return true; }
 function nonLatin1(s) { const out = []; for (const ch of s) { if (ch.codePointAt(0) > 255 && !out.includes(ch)) out.push(ch); } return out; }
+const CHAR_NAMES = {
+  '\uFFFD': 'caractère illisible', '\u2E2E': "point d'interrogation inversé", '\u061F': "point d'interrogation arabe",
+  '\u2E18': 'point exclarrogatif inversé', '\u2022': 'puce', '\u2192': 'flèche', '\u2713': 'coche', '\u2122': 'marque déposée TM',
+  '\u0153': 'o e lié', '\u2264': 'inférieur ou égal', '\u2265': 'supérieur ou égal', '\u2260': 'différent'
+};
 function cp(ch) { return 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'); }
 function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
 function plural(n, one, many) { return n + ' ' + (n > 1 ? many : one); }
@@ -643,7 +648,12 @@ function validate() {
     // Latin-1
     for (let c = 0; c < UUID; c++) {
       const bad = nonLatin1(v[c]);
-      if (bad.length) add(r, c, 'err', `${plainName(c)} : caractère${bad.length > 1 ? 's' : ''} non accepté${bad.length > 1 ? 's' : ''} par l'import : ${bad.map(ch => `« ${ch} » (${cp(ch)})`).join(', ')}. À remplacer ou supprimer.`, 'latin1');
+      if (bad.length) {
+        let msg = `${plainName(c)} : caractère${bad.length > 1 ? 's' : ''} non accepté${bad.length > 1 ? 's' : ''} par l'import : ${bad.map(ch => `« ${ch} » (${cp(ch)}${CHAR_NAMES[ch] ? ', ' + CHAR_NAMES[ch] : ''})`).join(', ')}.`;
+        if (bad.includes('\uFFFD')) msg += " Ce signe remplace une lettre perdue lors d'une conversion (copier-coller depuis un PDF ou un site, fichier mal encodé) : c'était souvent un accent ou une apostrophe. Retapez le mot concerné.";
+        else msg += ' À remplacer ou supprimer.';
+        add(r, c, 'err', msg, 'latin1');
+      }
     }
   }
   for (const list of fileMap.values()) {
