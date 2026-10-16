@@ -282,6 +282,11 @@ table.grid td.editing { overflow: visible; z-index: 5; padding: 0; }
 .dl .why.okay { color: var(--ok-text); }
 .reminder { margin-top: 14px; }
 .libmsg { margin: 0 0 12px; }
+.modal { position: fixed; inset: 0; z-index: 100; background: rgba(10, 16, 24, 0.45); display: grid; place-items: center; padding: 16px; }
+.modal[hidden] { display: none; }
+.modal-card { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--pop-shadow); padding: 18px 20px; max-width: 460px; width: 100%; }
+.modal-card p { margin: 0 0 14px; font-size: 15.5px; }
+.modal-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 footer { color: var(--muted); font-size: 12.5px; text-align: center; }
 </style>
 </head>
@@ -411,6 +416,12 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
 
 <div id="popup" class="popup" role="listbox" aria-label="Valeurs possibles" hidden></div>
 <div id="bubble" class="bubble" role="tooltip" hidden></div>
+<div id="confirmDlg" class="modal" hidden>
+  <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="confirmMsg">
+    <p id="confirmMsg"></p>
+    <div class="modal-btns"><button type="button" id="confirmNo">Garder le tableau actuel</button><button type="button" id="confirmOk" class="primary">Remplacer</button></div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -689,11 +700,40 @@ function buildCsvBytes() {
   }
   return out;
 }
-function downloadBlob(blob, name) {
+/* Téléchargement : dans la page publiée sur claude.ai, passe par la capacité « downloads »
+   (le visiteur confirme) ; ouvert comme simple fichier HTML, lien de téléchargement classique. */
+let downloadsCap = null;
+function getDownloads() {
+  if (!window.claude || typeof window.claude.use !== 'function') return Promise.resolve(null);
+  if (!downloadsCap) downloadsCap = window.claude.use('downloads').catch(() => null);
+  return downloadsCap;
+}
+async function downloadBlob(blob, name) {
+  const dl = await getDownloads();
+  if (dl) {
+    try { await dl.save({ filename: name, data: blob }); return 'saved'; }
+    catch (e) { return e && e.code === 'declined' ? 'declined' : 'error:' + ((e && e.message) || 'téléchargement impossible'); }
+  }
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return 'saved';
+}
+/* Confirmation dans la page (les boîtes confirm() du navigateur sont bloquées dans la page publiée). */
+function askConfirm(message, okLabel) {
+  return new Promise(resolve => {
+    const dlg = $('confirmDlg');
+    $('confirmMsg').textContent = message;
+    $('confirmOk').textContent = okLabel || 'Remplacer';
+    const prev = document.activeElement;
+    dlg.hidden = false;
+    $('confirmOk').focus();
+    const done = v => { dlg.hidden = true; $('confirmOk').onclick = $('confirmNo').onclick = dlg.onkeydown = null; if (prev && prev.focus) prev.focus(); resolve(v); };
+    $('confirmOk').onclick = () => done(true);
+    $('confirmNo').onclick = () => done(false);
+    dlg.onkeydown = e => { if (e.key === 'Escape') { e.preventDefault(); done(false); } };
+  });
 }
 
 /* ======================================================================
@@ -788,7 +828,7 @@ async function importFile(file) {
     setBox(box, 'mid', 'Aucune ressource trouvée', `<p>« ${esc(name)} » (${where}) ne contient aucune ligne remplie.</p>`);
     return;
   }
-  if (hasData() && !confirm(`Remplacer le tableau actuel par le contenu de « ${name} » ?\n(Vous pourrez revenir en arrière avec Annuler.)`)) return;
+  if (hasData() && !(await askConfirm(`Remplacer le tableau actuel par le contenu de « ${name} » ? Vous pourrez revenir en arrière avec « Annuler ».`))) return;
   pushUndo();
   S.rows = res.rows;
   ensureRows();
@@ -938,7 +978,7 @@ async function handleFolderSource(src, card) {
     names: res.names, set: new Set(res.names), cache: new Map(), summary: res, label, card
   };
   if (card === 'A') {
-    if (hasData() && !confirm(`Remplacer le tableau actuel par les ${res.names.length} fichiers de « ${label} » ?\n(Vous pourrez revenir en arrière avec Annuler.)`)) return;
+    if (hasData() && !(await askConfirm(`Remplacer le tableau actuel par les ${res.names.length} fichiers de « ${label} » ? Vous pourrez revenir en arrière avec « Annuler ».`))) return;
     pushUndo();
     folder.created = res.names.length;
     S.folder = folder;
@@ -1062,8 +1102,8 @@ function restoreDraft() {
     const when = new Date(d.savedAt || Date.now());
     const line = $('draftLine');
     line.innerHTML = `<span>Brouillon restauré (enregistré le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, ${plural(S.rows.length, 'ressource', 'ressources')}).</span><button type="button" id="bClear">Vider le tableau</button>`;
-    $('bClear').onclick = () => {
-      if (!confirm('Vider entièrement le tableau ? (Annuler reste possible.)')) return;
+    $('bClear').onclick = async () => {
+      if (!(await askConfirm('Vider entièrement le tableau ? Vous pourrez revenir en arrière avec « Annuler ».', 'Vider'))) return;
       pushUndo(); S.rows = []; ensureRows(); S.sel = { ar: 0, ac: 0, fr: 0, fc: 0 }; line.innerHTML = ''; refreshAll(true);
     };
     return true;
@@ -1882,7 +1922,9 @@ $('bExcel').onclick = async () => {
     const blob = await buildExcelBlob(data);
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`;
-    downloadBlob(blob, `Fichier-de-travail-import-WF_${stamp}.xlsx`);
+    const st = await downloadBlob(blob, `Fichier-de-travail-import-WF_${stamp}.xlsx`);
+    if (st === 'declined') { setBox(box, 'mid', 'Téléchargement annulé', '<p>Le fichier Excel n\'a pas été enregistré.</p>'); return; }
+    if (st !== 'saved') { setBox(box, 'bad', 'Export Excel impossible', `<p>${esc(st.slice(6))}</p>`); return; }
     setBox(box, 'ok', 'Fichier Excel téléchargé', `<p>${plural(data.length, 'ressource enregistrée', 'ressources enregistrées')} dans le modèle (listes déroulantes, colonnes bleues et onglets « pictos » et « AIDE » conservés). Vous pourrez le ré-importer dans la partie 1.</p>`);
     setTimeout(() => { if (box.classList.contains('ok')) { box.className = 'box'; box.innerHTML = ''; } }, 9000);
   } catch (e) {
@@ -1893,13 +1935,14 @@ $('bExcel').onclick = async () => {
 /* ======================================================================
    Téléchargement import.csv
    ====================================================================== */
-$('bCsv').onclick = () => {
+$('bCsv').onclick = async () => {
   commitEdit();
   if (S.val.errors.length || !S.val.nonEmpty) return;
   let bytes;
   try { bytes = buildCsvBytes(); }
   catch (e) { $('csvWhy').className = 'why'; $('csvWhy').textContent = e.message; return; }
-  downloadBlob(new Blob([bytes], { type: 'text/csv;charset=iso-8859-1' }), 'import.csv');
+  const st = await downloadBlob(new Blob([bytes], { type: 'text/csv;charset=iso-8859-1' }), 'import.csv');
+  if (st !== 'saved') { $('csvWhy').className = 'why'; $('csvWhy').textContent = st === 'declined' ? 'Téléchargement annulé.' : 'Téléchargement impossible : ' + st.slice(6); return; }
   $('csvWhy').className = 'why okay';
   $('csvWhy').textContent = `import.csv téléchargé (${plural(S.val.nonEmpty, 'ressource', 'ressources')}). Vérifiez son nom exact dans vos Téléchargements.`;
 };

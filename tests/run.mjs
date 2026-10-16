@@ -68,11 +68,11 @@ async function newPage(opts = {}) {
 const rowsOf = page => page.evaluate(() => window.__wf.S.rows.filter(r => r.some(v => v !== '')).map(r => r.slice()));
 const val = page => page.evaluate(() => { const v = window.__wf.S.val; return { errors: v.errors.map(e => ({ r: e.r, c: e.c, kind: e.kind, msg: e.msg, lvl: e.lvl })), warnings: v.warnings.map(e => ({ r: e.r, c: e.c, kind: e.kind, msg: e.msg })), nonEmpty: v.nonEmpty }; });
 async function importFile(page, path, accept = true) {
-  page.once('dialog', d => accept ? d.accept() : d.dismiss());
   await page.setInputFiles('#inImport', path);
-  await page.waitForTimeout(300);
-}
-async function downloadCsv(page) {
+  await page.waitForTimeout(200);
+  if (await page.isVisible('#confirmDlg')) await page.click(accept ? '#confirmOk' : '#confirmNo');
+  await page.waitForTimeout(200);
+}async function downloadCsv(page) {
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#bCsv')]);
   ok(dl.suggestedFilename() === 'import.csv', 'nom du fichier téléchargé = import.csv', dl.suggestedFilename());
   const p = join(work, 'dl-' + Date.now() + '.csv'); await dl.saveAs(p);

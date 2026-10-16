@@ -34,7 +34,7 @@ espaces de début et de fin supprimés). Colonnes de noms de fichiers (1, 13, 14
 | Fichier | Rôle |
 |---|---|
 | `src/generateur.src.html` | Source (HTML + CSS + JS) |
-| `tools/build.mjs` | Insère le modèle Excel (base64) → `generateur-import-csv.html` |
+| `tools/build.mjs` | Insère le modèle Excel (base64) → `generateur-import-csv.html` et `dist/artifact.html` (version publiée sur claude.ai) |
 | `ref/` | Modèle Excel et exemple `import.csv` de référence |
 | `tests/run.mjs` | Tests Playwright de bout en bout (146 vérifications) |
 | `tests/make_fixtures.py` | Jeux de test (dossier de 30 fichiers, zip, zip64, CSV, Excel) |
