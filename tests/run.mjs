@@ -135,7 +135,7 @@ await section('Lecture d\'un dossier de 30 fichiers (« Je commence de zéro »)
   ok(names.includes('annexe.pdf'), 'fichier du sous-dossier gardé par son nom seul');
   ok(!names.some(n => /DS_Store|Thumbs|desktop\.ini|^~\$|^\.|import\.csv|^\._/.test(n)), 'fichiers système, cachés, ~$ et import.csv ignorés', names);
   ok(names.indexOf('doc2.pdf') < names.indexOf('doc10.pdf'), 'ordre naturel (doc2 avant doc10)');
-  ok(names.includes('Élève_fiche.docx') && names.includes('Vidéo_intro.mp4'), 'noms accentués conservés');
+  ok(names.includes('Eleve_fiche.docx') && names.includes('Video_intro.mp4'), 'noms conservés tels quels');
   ok(rows.every(r => r.slice(1).every(v => v === '')), 'seule la colonne « Nom du fichier » est remplie');
   const box = await page.textContent('#boxA');
   ok(/sous-dossier/.test(box) && /racine de l'archive/.test(box), 'avertissement sous-dossiers visible', box);
@@ -271,11 +271,21 @@ await section('Espaces interdits dans les noms de fichiers', async () => {
   ok(await page.locator('#c0_0.c-err').count() === 1, 'cellule en rouge');
   ok(/Espaces dans les noms de fichiers/.test(await page.textContent('#alertBox')), 'pastille dans le bandeau');
   ok(await page.isDisabled('#bCsv'), 'téléchargement bloqué');
+  // Accents et caractères spéciaux
+  await setRows(page, [fullRow({ 0: 'Qu-y-a-t-il-dans-ta-t\u00eate.mp4', 1: 'A' }), fullRow({ 0: 'te\uFFFDte.mp4', 1: 'B' }), fullRow({ 0: 'n\u00b01_\u0153uvre.pdf', 1: 'C' }), fullRow({ 0: 'ok-1.pdf', 1: 'D', 19: 'mini\u00e9.jpg' })]);
+  v = await val(page);
+  const acc = v.errors.filter(e => e.kind === 'accent');
+  ok(acc.some(e => e.r === 0 && /Qu-y-a-t-il-dans-ta-tete\.mp4/.test(e.msg)), 'accent = erreur rouge + nom proposé sans accent', acc);
+  ok(acc.some(e => e.r === 1 && /abîmé/.test(e.msg) && /U\+FFFD/.test(e.msg)), 'caractère illisible : nom abîmé expliqué');
+  ok(acc.some(e => e.r === 2 && /n1_oeuvre\.pdf/.test(e.msg)), '° et œ interdits, proposition « n1_oeuvre.pdf »');
+  ok(acc.some(e => e.r === 3 && e.c === 19), 'accent dans un fichier compagnon = erreur');
+  ok(!v.errors.some(e => e.kind === 'latin1' && e.c === 0), 'pas de double erreur sur le même nom');
+  ok(/Accents ou caractères spéciaux/.test(await page.textContent('#alertBox')), 'pastille « Accents » dans le bandeau');
   // Dossier contenant un nom avec espace : encadré rouge
   await setRows(page, []);
   await page.setInputFiles('#inFolderA', join(FX, 'folder_espaces'));
   await page.waitForTimeout(300);
-  ok(await page.getAttribute('#boxA', 'class') === 'box bad' && /espace/.test(await page.textContent('#boxA')), 'dossier : encadré rouge pour les espaces', await page.textContent('#boxA'));
+  ok(await page.getAttribute('#boxA', 'class') === 'box bad' && /espace ou un accent/.test(await page.textContent('#boxA')) && /tete\.mp4/.test(await page.textContent('#boxA')), 'dossier : encadré rouge pour les espaces et accents', await page.textContent('#boxA'));
   await ctx.close();
 });
 
@@ -411,9 +421,9 @@ await section('Remplir une colonne entière', async () => {
 await section('Normalisation à l\'export, Latin-1 et CRLF', async () => {
   const { page, ctx } = await newPage();
   await setRows(page, [
-    fullRow({ 0: '  Fiche_n°1_été.pdf ', 1: '  L’œuvre  “complète” – 10 €…  ', 8: 'a¤b\tc\nd', 2: 'Œil — ‘x’' }),
+    fullRow({ 0: '  Fiche_n1_ete.pdf ', 1: '  L’œuvre  “complète” – 10 €…  ', 8: 'a¤b\tc\nd', 2: 'Œil — ‘x’' }),
     new Array(23).fill(''),
-    fullRow({ 0: 'été.pdf', 1: 'Deux' }),
+    fullRow({ 0: 'deux.pdf', 1: 'Deux e\u0301te\u0301' }),
   ]);
   let v = await val(page);
   ok(v.errors.length === 0, 'aucune erreur', v.errors);
@@ -423,17 +433,17 @@ await section('Normalisation à l\'export, Latin-1 et CRLF', async () => {
   ok(lines.length === 4 && lines[3] === '', '2 ressources + en-tête, ligne vide du milieu ignorée', lines.length);
   const c1 = lines[1].split('¤');
   ok(c1.length === 23, '23 colonnes');
-  ok(c1[0] === 'Fiche_n°1_été.pdf', 'nom de fichier : trim seulement', c1[0]);
+  ok(c1[0] === 'Fiche_n1_ete.pdf', 'nom de fichier : trim seulement', c1[0]);
   ok(c1[1] === "L'oeuvre «complète» - 10 EUR...", 'titre normalisé (’ “ ” – € … œ, espaces)', c1[1]);
   ok(c1[2] === "OEil - 'x'", 'Œ — ‘ ’ normalisés', c1[2]);
   ok(c1[8] === 'ab c d', '¤ supprimé, tabulation / retour à la ligne → espace', c1[8]);
   ok(c1[22] === '', 'uuid vide');
-  ok(lines[2].split('¤')[0] === 'été.pdf', 'nom de fichier décomposé (macOS) → NFC', lines[2].split('¤')[0]);
+  ok(lines[2].split('¤')[1] === 'Deux été', 'texte accentué décomposé (macOS) → NFC', lines[2]);
   ok(bytes.includes(Buffer.from('été', 'latin1')), 'octets Latin-1');
   // Un caractère hors Latin-1 dans un nom de fichier n'est pas transformé : erreur bloquante
-  await setRows(page, [fullRow({ 0: 'Fiche – 1.pdf' })]);
+  await setRows(page, [fullRow({ 0: 'Fiche–1.pdf' })]);
   v = await val(page);
-  ok(v.errors.some(e => e.c === 0 && e.kind === 'latin1'), 'tiret long dans un nom de fichier = erreur (pas de transformation)');
+  ok(v.errors.some(e => e.c === 0 && e.kind === 'accent'), 'tiret long dans un nom de fichier = erreur (pas de transformation)');
   ok(await page.isDisabled('#bCsv'), 'téléchargement bloqué');
   await ctx.close();
 });

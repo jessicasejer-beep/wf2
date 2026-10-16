@@ -17,7 +17,7 @@ root = os.path.join(out, "folder30", "Ressources_Chap1")
 os.makedirs(os.path.join(root, "sous-dossier"), exist_ok=True)
 os.makedirs(os.path.join(root, "__MACOSX"), exist_ok=True)
 names = [f"doc{i}.pdf" for i in range(1, 25)]  # ordre naturel attendu : doc1, doc2 … doc10
-names += ["Vidéo_intro.mp4", "carte-europe.jpg", "audio_ch1.mp3", "sous_titres.vtt", "Élève_fiche.docx"]
+names += ["Video_intro.mp4", "carte-europe.jpg", "audio_ch1.mp3", "sous_titres.vtt", "Eleve_fiche.docx"]
 for n in names:
     with open(os.path.join(root, n), "wb") as f:
         f.write(b"x")
@@ -32,7 +32,7 @@ with open(os.path.join(root, "__MACOSX", "._doc1.pdf"), "wb") as f:
 # 1 bis. Dossier contenant des noms avec espaces (interdits)
 sp = os.path.join(out, "folder_espaces", "Lot")
 os.makedirs(sp, exist_ok=True)
-for n in ["mon fichier.pdf", "ok.pdf"]:
+for n in ["mon fichier.pdf", "ok.pdf", "tête.mp4"]:
     with open(os.path.join(sp, n), "wb") as f:
         f.write(b"x")
 
