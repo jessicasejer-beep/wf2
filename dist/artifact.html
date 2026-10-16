@@ -350,6 +350,7 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
         <li><strong>Effacer</strong> : <kbd>Suppr</kbd>. <strong>Annuler / Rétablir</strong> : <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>.</li>
         <li><strong>Listes</strong> (picto, profil, 0/1, langue, watermark) : cliquer sur la flèche ▾ de la cellule, ou <kbd>Alt</kbd>+<kbd>↓</kbd>, ou commencer à taper pour filtrer.</li>
         <li>Les lignes entièrement vides sont ignorées. La colonne uuid reste toujours vide.</li>
+        <li>Les noms de fichiers ne doivent contenir <strong>aucun espace</strong> (remplacer par « _ » ou « - »).</li>
         <li>Survoler une cellule colorée (ou la sélectionner) affiche l'explication de l'erreur.</li>
       </ul>
     </details>
@@ -661,6 +662,7 @@ function validate() {
   return S.val;
 }
 function checkFileName(r, c, f, add) {
+  if (/\s/.test(f)) add(r, c, 'err', `${plainName(c)} : « ${f} » contient un espace, interdit dans un nom de fichier. Renommez le fichier dans le dossier ET dans le tableau, par exemple « ${f.replace(/\s+/g, '_')} ».`, 'space');
   if (/[\/\\]/.test(f)) add(r, c, 'err', `${plainName(c)} : uniquement le nom du fichier, sans dossier (« / » ou « \\ ») : les fichiers sont à la racine de l'archive.`, 'format');
   if (/[\u0000-\u001F¤]/.test(f)) add(r, c, 'err', `${plainName(c)} : le nom contient un caractère interdit (¤, tabulation ou retour à la ligne).`, 'format');
 }
@@ -1003,7 +1005,9 @@ function renderFolderBox() {
   const extra = F.names.filter(n => !ref.has(n));
   const missingRows = val.errors.filter(e => e.kind === 'missing');
   const missingNames = new Set(missingRows.map(e => normFile(S.rows[e.r][e.c])));
+  const spaced = F.names.filter(n => /\s/.test(n));
   const notes = [];
+  if (spaced.length && missingNames.size) notes.push(`<li><strong style="display:inline">${plural(spaced.length, 'fichier du dossier a un espace', 'fichiers du dossier ont un espace')} dans son nom</strong> : interdit, à renommer (ex. <code>${esc(spaced[0])}</code>).</li>`);
   if (sm.sub) notes.push(`<li><strong style="display:inline">${plural(sm.sub, 'fichier est dans un sous-dossier', 'fichiers sont dans des sous-dossiers')}</strong> : ils doivent être à la racine de l'archive. Seul leur nom a été gardé (ex. <code>${esc(sm.subNames[0])}</code>).</li>`);
   if (sm.dups) notes.push(`<li>${plural(sm.dups, 'doublon de nom ignoré', 'doublons de nom ignorés')} (même nom dans plusieurs sous-dossiers).</li>`);
   if (sm.ignored) notes.push(`<li>${plural(sm.ignored, 'fichier système ou caché ignoré', 'fichiers système ou cachés ignorés')} (.DS_Store, Thumbs.db, import.csv…).</li>`);
@@ -1015,6 +1019,9 @@ function renderFolderBox() {
     kind = 'bad'; title = `${plural(missingNames.size, 'nom introuvable', 'noms introuvables')} dans le dossier (cellules en rouge)`;
     const ex = [...missingNames].slice(0, 5);
     body += `<p>Exemples : ${ex.map(x => `<code>${esc(x)}</code>`).join(', ')}${missingNames.size > 5 ? '…' : ''}. Corrigez le nom dans le tableau (une suggestion s'affiche sur la cellule).</p>`;
+  } else if (spaced.length) {
+    kind = 'bad'; title = `${plural(spaced.length, 'fichier du dossier a un espace', 'fichiers du dossier ont un espace')} dans son nom : interdit`;
+    body += `<p>Exemples : ${spaced.slice(0, 5).map(x => `<code>${esc(x)}</code>`).join(', ')}${spaced.length > 5 ? '…' : ''}. Renommez-les dans le dossier (par exemple en remplaçant l'espace par « _ »), corrigez le tableau, puis choisissez à nouveau le dossier.</p>`;
   } else if (extra.length) {
     kind = 'mid'; title = `Tous les noms du tableau existent, mais ${plural(extra.length, 'fichier du dossier est absent', 'fichiers du dossier sont absents')} du tableau`;
   } else {
@@ -1318,7 +1325,7 @@ function afterEdit() {
    ====================================================================== */
 const KIND_LABEL = {
   list: 'Valeurs hors liste', dup: 'Noms de fichier en double', missing: 'Fichiers introuvables dans le dossier',
-  latin1: 'Caractères non acceptés', format: 'Format incorrect'
+  latin1: 'Caractères non acceptés', format: 'Format incorrect', space: 'Espaces dans les noms de fichiers'
 };
 function chipLabel(kind, n) {
   if (kind.startsWith('req')) return `${plainName(+kind.slice(3))} vide : ${n}`;

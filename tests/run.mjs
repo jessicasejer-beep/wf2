@@ -135,7 +135,7 @@ await section('Lecture d\'un dossier de 30 fichiers (« Je commence de zéro »)
   ok(names.includes('annexe.pdf'), 'fichier du sous-dossier gardé par son nom seul');
   ok(!names.some(n => /DS_Store|Thumbs|desktop\.ini|^~\$|^\.|import\.csv|^\._/.test(n)), 'fichiers système, cachés, ~$ et import.csv ignorés', names);
   ok(names.indexOf('doc2.pdf') < names.indexOf('doc10.pdf'), 'ordre naturel (doc2 avant doc10)');
-  ok(names.includes('Élève fiche.docx') && names.includes('Vidéo intro.mp4'), 'noms accentués conservés');
+  ok(names.includes('Élève_fiche.docx') && names.includes('Vidéo_intro.mp4'), 'noms accentués conservés');
   ok(rows.every(r => r.slice(1).every(v => v === '')), 'seule la colonne « Nom du fichier » est remplie');
   const box = await page.textContent('#boxA');
   ok(/sous-dossier/.test(box) && /racine de l'archive/.test(box), 'avertissement sous-dossiers visible', box);
@@ -259,6 +259,23 @@ await section('Contrôles : chaque type d\'erreur', async () => {
   const shown = await page.locator('#body tr').count();
   ok(shown < 14 && shown > 0, 'case « Seulement les lignes à corriger »', shown);
   await page.uncheck('#onlyErr');
+  await ctx.close();
+});
+
+await section('Espaces interdits dans les noms de fichiers', async () => {
+  const { page, ctx } = await newPage();
+  await setRows(page, [fullRow({ 0: 'mon fichier.pdf', 1: 'A', 13: 'sous titre.vtt' }), fullRow({ 0: 'ok.pdf', 1: 'B' })]);
+  let v = await val(page);
+  ok(v.errors.some(e => e.r === 0 && e.c === 0 && e.kind === 'space' && e.lvl === 'err' && /mon_fichier\.pdf/.test(e.msg)), 'espace dans le nom du fichier = erreur rouge + suggestion', v.errors);
+  ok(v.errors.some(e => e.r === 0 && e.c === 13 && e.kind === 'space'), 'espace dans un fichier compagnon = erreur');
+  ok(await page.locator('#c0_0.c-err').count() === 1, 'cellule en rouge');
+  ok(/Espaces dans les noms de fichiers/.test(await page.textContent('#alertBox')), 'pastille dans le bandeau');
+  ok(await page.isDisabled('#bCsv'), 'téléchargement bloqué');
+  // Dossier contenant un nom avec espace : encadré rouge
+  await setRows(page, []);
+  await page.setInputFiles('#inFolderA', join(FX, 'folder_espaces'));
+  await page.waitForTimeout(300);
+  ok(await page.getAttribute('#boxA', 'class') === 'box bad' && /espace/.test(await page.textContent('#boxA')), 'dossier : encadré rouge pour les espaces', await page.textContent('#boxA'));
   await ctx.close();
 });
 
@@ -394,7 +411,7 @@ await section('Remplir une colonne entière', async () => {
 await section('Normalisation à l\'export, Latin-1 et CRLF', async () => {
   const { page, ctx } = await newPage();
   await setRows(page, [
-    fullRow({ 0: '  Fiche n°1 été.pdf ', 1: '  L’œuvre  “complète” – 10 €…  ', 8: 'a¤b\tc\nd', 2: 'Œil — ‘x’' }),
+    fullRow({ 0: '  Fiche_n°1_été.pdf ', 1: '  L’œuvre  “complète” – 10 €…  ', 8: 'a¤b\tc\nd', 2: 'Œil — ‘x’' }),
     new Array(23).fill(''),
     fullRow({ 0: 'été.pdf', 1: 'Deux' }),
   ]);
@@ -406,7 +423,7 @@ await section('Normalisation à l\'export, Latin-1 et CRLF', async () => {
   ok(lines.length === 4 && lines[3] === '', '2 ressources + en-tête, ligne vide du milieu ignorée', lines.length);
   const c1 = lines[1].split('¤');
   ok(c1.length === 23, '23 colonnes');
-  ok(c1[0] === 'Fiche n°1 été.pdf', 'nom de fichier : trim seulement', c1[0]);
+  ok(c1[0] === 'Fiche_n°1_été.pdf', 'nom de fichier : trim seulement', c1[0]);
   ok(c1[1] === "L'oeuvre «complète» - 10 EUR...", 'titre normalisé (’ “ ” – € … œ, espaces)', c1[1]);
   ok(c1[2] === "OEil - 'x'", 'Œ — ‘ ’ normalisés', c1[2]);
   ok(c1[8] === 'ab c d', '¤ supprimé, tabulation / retour à la ligne → espace', c1[8]);

@@ -17,7 +17,7 @@ root = os.path.join(out, "folder30", "Ressources_Chap1")
 os.makedirs(os.path.join(root, "sous-dossier"), exist_ok=True)
 os.makedirs(os.path.join(root, "__MACOSX"), exist_ok=True)
 names = [f"doc{i}.pdf" for i in range(1, 25)]  # ordre naturel attendu : doc1, doc2 … doc10
-names += ["Vidéo intro.mp4", "carte-europe.jpg", "audio_ch1.mp3", "sous_titres.vtt", "Élève fiche.docx"]
+names += ["Vidéo_intro.mp4", "carte-europe.jpg", "audio_ch1.mp3", "sous_titres.vtt", "Élève_fiche.docx"]
 for n in names:
     with open(os.path.join(root, n), "wb") as f:
         f.write(b"x")
@@ -28,6 +28,13 @@ for junk in [".DS_Store", "Thumbs.db", "desktop.ini", "~$brouillon.docx", ".cach
         f.write(b"x")
 with open(os.path.join(root, "__MACOSX", "._doc1.pdf"), "wb") as f:
     f.write(b"x")
+
+# 1 bis. Dossier contenant des noms avec espaces (interdits)
+sp = os.path.join(out, "folder_espaces", "Lot")
+os.makedirs(sp, exist_ok=True)
+for n in ["mon fichier.pdf", "ok.pdf"]:
+    with open(os.path.join(sp, n), "wb") as f:
+        f.write(b"x")
 
 # 2. Archive zip classique (noms UTF-8)
 zp = os.path.join(out, "archive.zip")
