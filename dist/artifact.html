@@ -513,6 +513,10 @@ const CHAR_NAMES = {
   '\u2E18': 'point exclarrogatif inversé', '\u2022': 'puce', '\u2192': 'flèche', '\u2713': 'coche', '\u2122': 'marque déposée TM',
   '\u0153': 'o e lié', '\u2264': 'inférieur ou égal', '\u2265': 'supérieur ou égal', '\u2260': 'différent'
 };
+/* Proposition de nom sûr : sans accent, sans caractère illisible, espaces remplacés par _ */
+function safeFileName(f) {
+  return f.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, '_');
+}
 function cp(ch) { return 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'); }
 function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
 function plural(n, one, many) { return n + ' ' + (n > 1 ? many : one); }
@@ -650,7 +654,8 @@ function validate() {
       const bad = nonLatin1(v[c]);
       if (bad.length) {
         let msg = `${plainName(c)} : caractère${bad.length > 1 ? 's' : ''} non accepté${bad.length > 1 ? 's' : ''} par l'import : ${bad.map(ch => `« ${ch} » (${cp(ch)}${CHAR_NAMES[ch] ? ', ' + CHAR_NAMES[ch] : ''})`).join(', ')}.`;
-        if (bad.includes('\uFFFD')) msg += " Ce signe remplace une lettre perdue lors d'une conversion (copier-coller depuis un PDF ou un site, fichier mal encodé) : c'était souvent un accent ou une apostrophe. Retapez le mot concerné.";
+        if (COLS[c].file) msg += ` Ce nom de fichier a été abîmé (souvent une lettre accentuée perdue lors d'une copie entre Mac et Windows ou d'une compression .zip). Renommez le fichier dans le dossier ET dans le tableau, de préférence sans accent, par exemple « ${safeFileName(v[c])} ».`;
+        else if (bad.includes('\uFFFD')) msg += " Ce signe remplace une lettre perdue lors d'une conversion (copier-coller depuis un PDF ou un site, fichier mal encodé) : c'était souvent un accent ou une apostrophe. Retapez le mot concerné.";
         else msg += ' À remplacer ou supprimer.';
         add(r, c, 'err', msg, 'latin1');
       }
