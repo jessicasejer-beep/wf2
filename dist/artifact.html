@@ -88,6 +88,9 @@ header.top {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   padding: 18px 0 14px;
 }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.danger { color: var(--bad-text); border-color: var(--bad-border); background: var(--surface); font-weight: 600; }
+.danger:hover:not(:disabled) { background: var(--bad-bg); }
 header.top h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
 header.top .privacy {
   display: inline-flex; align-items: center; gap: 8px; margin-top: 4px;
@@ -291,7 +294,10 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
       <h1>Générateur d'import.csv — ressources numériques</h1>
       <div class="privacy" role="note"><span aria-hidden="true">🔒</span> Aucun envoi de données : vos fichiers ne quittent pas votre ordinateur, tout est traité dans ce navigateur.</div>
     </div>
-    <button type="button" id="themeBtn" aria-pressed="false" title="Basculer thème clair / sombre">◐ Thème</button>
+    <div class="top-actions">
+      <button type="button" id="bReset" class="danger" title="Effacer le tableau, le dossier lu et le brouillon enregistré, pour commencer un nouvel import">🗑 Supprimer les données</button>
+      <button type="button" id="themeBtn" aria-pressed="false" title="Basculer thème clair / sombre">◐ Thème</button>
+    </div>
   </header>
 
   <div id="libMsg" class="box mid libmsg" role="status" hidden></div>
@@ -745,6 +751,7 @@ function askConfirm(message, okLabel) {
     const dlg = $('confirmDlg');
     $('confirmMsg').textContent = message;
     $('confirmOk').textContent = okLabel || 'Remplacer';
+    $('confirmNo').textContent = okLabel === 'Supprimer les données' ? 'Garder mes données' : 'Garder le tableau actuel';
     const prev = document.activeElement;
     dlg.hidden = false;
     $('confirmOk').focus();
@@ -1108,8 +1115,10 @@ function scheduleSave() {
   saveTimer = setTimeout(() => {
     try {
       const rows = S.rows.filter(r => !isRowEmpty(r));
-      if (!rows.length) localStorage.removeItem(DRAFT_KEY);
-      else localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), rows }));
+      const F = S.folder;
+      const folder = F ? { names: F.names, label: F.label, card: F.card, created: F.created || 0, summary: F.summary } : null;
+      if (!rows.length && !folder) localStorage.removeItem(DRAFT_KEY);
+      else localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), rows, folder }));
       $('saveState').textContent = rows.length ? 'Brouillon enregistré dans ce navigateur à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
     } catch (e) {
       $('saveState').textContent = 'Sauvegarde automatique indisponible dans ce navigateur : pensez à « Télécharger en Excel ».';
@@ -1121,15 +1130,16 @@ function restoreDraft() {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return false;
     const d = JSON.parse(raw);
-    if (!d || !Array.isArray(d.rows) || !d.rows.length) return false;
+    if (!d || !Array.isArray(d.rows)) return false;
     S.rows = d.rows.map(r => { const x = emptyRow(); for (let c = 0; c < UUID; c++) x[c] = r[c] == null ? '' : String(r[c]); return x; });
+    const f = d.folder;
+    if (f && Array.isArray(f.names) && f.names.length) {
+      S.folder = { names: f.names, set: new Set(f.names), cache: new Map(), label: f.label || 'dossier', card: f.card === 'A' ? 'A' : 'B', created: f.created || 0,
+        summary: Object.assign({ ignored: 0, sub: 0, subNames: [], dups: 0 }, f.summary || {}) };
+    }
+    if (!S.rows.length && !S.folder) return false;
     const when = new Date(d.savedAt || Date.now());
-    const line = $('draftLine');
-    line.innerHTML = `<span>Brouillon restauré (enregistré le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, ${plural(S.rows.length, 'ressource', 'ressources')}).</span><button type="button" id="bClear">Vider le tableau</button>`;
-    $('bClear').onclick = async () => {
-      if (!(await askConfirm('Vider entièrement le tableau ? Vous pourrez revenir en arrière avec « Annuler ».', 'Vider'))) return;
-      pushUndo(); S.rows = []; ensureRows(); S.sel = { ar: 0, ac: 0, fr: 0, fc: 0 }; line.innerHTML = ''; refreshAll(true);
-    };
+    $('draftLine').innerHTML = `<span>Travail précédent repris (enregistré le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, ${plural(S.rows.length, 'ressource', 'ressources')}${S.folder ? `, dossier « ${esc(S.folder.label)} »` : ''}).${S.folder ? ' Si vous avez renommé des fichiers depuis, choisissez à nouveau le dossier.' : ''} Pour commencer un nouvel import : bouton « Supprimer les données » en haut de la page.</span>`;
     return true;
   } catch (e) { return false; }
 }
@@ -1439,6 +1449,7 @@ function selDataRows() {
   return out;
 }
 function updateToolbar() {
+  updateResetBtn();
   $('bUndo').disabled = !S.undo.length;
   $('bRedo').disabled = !S.redo.length;
   const f = S.onlyErr;
@@ -2006,6 +2017,24 @@ setupDrop($('cardA'), 'A');
 setupDrop($('cardB'), 'B');
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => e.preventDefault());
+
+/* Supprimer les données : seul moyen d'effacer le travail enregistré */
+function updateResetBtn() { $('bReset').disabled = !hasData() && !S.folder; }
+$('bReset').onclick = async () => {
+  commitEdit();
+  if (!(await askConfirm('Supprimer toutes les données (tableau, dossier lu et brouillon enregistré) pour repartir de zéro ? Cette action est définitive : pensez à « Télécharger en Excel » si vous voulez garder ce travail.', 'Supprimer les données'))) return;
+  clearTimeout(saveTimer);
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* indisponible */ }
+  S.rows = []; S.folder = null; S.undo.length = 0; S.redo.length = 0; S.onlyErr = false; S.lastImport = null;
+  $('onlyErr').checked = false;
+  S.sel = { ar: 0, ac: 0, fr: 0, fc: 0 };
+  for (const id of ['boxA', 'boxB', 'boxImport', 'excelMsg']) { const el = $(id); el.className = 'box'; el.innerHTML = ''; el._sig = null; }
+  $('draftLine').innerHTML = ''; $('fillMsg').textContent = ''; $('csvWhy').textContent = '';
+  $('fillCol').value = ''; buildFillValue();
+  refreshAll(true);
+  $('saveState').textContent = 'Données supprimées.';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 /* Thème */
 (function theme() {

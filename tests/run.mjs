@@ -522,7 +522,7 @@ await section('Brouillon (localStorage) et 350 lignes', async () => {
   await page.waitForFunction(() => window.__libs.xlsx === 'ok');
   const rows = await rowsOf(page);
   ok(rows.length === 350 && rows[10][4] === 'Niveau', 'brouillon restauré après rechargement', rows.length);
-  ok(/Brouillon restauré/.test(await page.textContent('#draftLine')), 'message de restauration');
+  ok(/Travail précédent repris/.test(await page.textContent('#draftLine')), 'message de restauration');
   // localStorage indisponible : l'outil fonctionne
   await ctx.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('bloqué'); } }); });
   const p2 = await ctx.newPage();
@@ -533,6 +533,33 @@ await section('Brouillon (localStorage) et 350 lignes', async () => {
   await p2.waitForTimeout(600);
   ok(errs.length === 0 && await p2.isEnabled('#bCsv'), 'fonctionne sans localStorage', errs);
   ok(/indisponible/.test(await p2.textContent('#saveState')), 'sauvegarde indisponible signalée');
+  await ctx.close();
+});
+
+await section('Bouton « Supprimer les données »', async () => {
+  const { page, ctx } = await newPage();
+  ok(await page.isDisabled('#bReset'), 'désactivé quand il n\'y a rien à supprimer');
+  await page.setInputFiles('#inFolderA', join(FX, 'folder30'));
+  await page.waitForTimeout(700);
+  ok(await page.isEnabled('#bReset'), 'actif quand il y a des données');
+  await page.reload();
+  await page.waitForTimeout(500);
+  ok((await rowsOf(page)).length === 30 && await page.evaluate(() => !!window.__wf.S.folder && window.__wf.S.folder.names.length === 30), 'travail et dossier lu conservés après rechargement');
+  ok(/Supprimer les données/.test(await page.textContent('#draftLine')), 'message de reprise du travail');
+  // Annuler la suppression
+  await page.click('#bReset');
+  ok(await page.isVisible('#confirmDlg'), 'demande de confirmation');
+  await page.click('#confirmNo');
+  ok((await rowsOf(page)).length === 30, 'refus : rien n\'est supprimé');
+  // Confirmer
+  await page.click('#bReset');
+  await page.click('#confirmOk');
+  ok((await rowsOf(page)).length === 0 && await page.evaluate(() => window.__wf.S.folder === null), 'tableau et dossier vidés');
+  ok(await page.textContent('#boxA') === '' && await page.isDisabled('#bUndo'), 'encadrés vidés, pas d\'annulation possible');
+  await page.waitForTimeout(600);
+  await page.reload();
+  await page.waitForTimeout(400);
+  ok((await rowsOf(page)).length === 0 && await page.textContent('#draftLine') === '', 'rien n\'est restauré après rechargement');
   await ctx.close();
 });
 
