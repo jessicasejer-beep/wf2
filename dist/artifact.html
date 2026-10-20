@@ -38,6 +38,9 @@
   --ok-bg: #e2f5e5;
   --ok-border: #2e7d32;
   --ok-text: #1b5e20;
+  --excel-bg: #1e7b3c;
+  --excel-hover: #17652f;
+  --excel-text: #ffffff;
   --bad-bg: #fde7e9;
   --bad-border: #c62828;
   --bad-text: #8e0000;
@@ -57,7 +60,7 @@
     --focus: #ffb347; --req-bg: #1f6fb5; --req-text: #ffffff; --opt-bg: #3a4350; --opt-text: #e7ebf0;
     --sel-bg: rgba(90, 166, 240, 0.22); --sel-border: #5aa6f0;
     --err-bg: #6e1f27; --err-strong: #ff9aa5; --dup-bg: #7a4a00; --dup-strong: #ffcd80; --warn-bg: #5a4c0c; --warn-strong: #ffe680;
-    --ok-bg: #173322; --ok-border: #4caf50; --ok-text: #b9f0bf; --bad-bg: #3d1519; --bad-border: #ef5350; --bad-text: #ffc5c8;
+    --ok-bg: #173322; --ok-border: #4caf50; --ok-text: #b9f0bf; --excel-bg: #2f9e55; --excel-hover: #38b061; --excel-text: #ffffff; --bad-bg: #3d1519; --bad-border: #ef5350; --bad-text: #ffc5c8;
     --mid-bg: #3a3112; --mid-border: #d4a72c; --mid-text: #ffe9a8; --locked-a: #222a35; --locked-b: #2b3442;
     --shadow: 0 1px 3px rgba(0,0,0,.5); --pop-shadow: 0 8px 24px rgba(0,0,0,.6);
     color-scheme: dark;
@@ -69,7 +72,7 @@
   --focus: #ffb347; --req-bg: #1f6fb5; --req-text: #ffffff; --opt-bg: #3a4350; --opt-text: #e7ebf0;
   --sel-bg: rgba(90, 166, 240, 0.22); --sel-border: #5aa6f0;
   --err-bg: #6e1f27; --err-strong: #ff9aa5; --dup-bg: #7a4a00; --dup-strong: #ffcd80; --warn-bg: #5a4c0c; --warn-strong: #ffe680;
-  --ok-bg: #173322; --ok-border: #4caf50; --ok-text: #b9f0bf; --bad-bg: #3d1519; --bad-border: #ef5350; --bad-text: #ffc5c8;
+  --ok-bg: #173322; --ok-border: #4caf50; --ok-text: #b9f0bf; --excel-bg: #2f9e55; --excel-hover: #38b061; --excel-text: #ffffff; --bad-bg: #3d1519; --bad-border: #ef5350; --bad-text: #ffc5c8;
   --mid-bg: #3a3112; --mid-border: #d4a72c; --mid-text: #ffe9a8; --locked-a: #222a35; --locked-b: #2b3442;
   --shadow: 0 1px 3px rgba(0,0,0,.5); --pop-shadow: 0 8px 24px rgba(0,0,0,.6);
   color-scheme: dark;
@@ -131,6 +134,8 @@ button:hover:not(:disabled), .btn:hover { border-color: var(--accent); }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
 .primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
 .primary:hover:not(:disabled) { filter: brightness(1.08); }
+.toolbar button.excel { background: var(--excel-bg); color: var(--excel-text); border-color: var(--excel-bg); font-weight: 600; }
+.toolbar button.excel:hover:not(:disabled) { background: var(--excel-hover); border-color: var(--excel-hover); }
 .big { font-size: 16px; padding: 11px 20px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .box { border-radius: 8px; border: 2px solid; padding: 10px 14px; font-size: 14.5px; }
@@ -392,7 +397,7 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
       <button type="button" id="bUp" title="Monter les lignes sélectionnées">▲ Monter</button>
       <button type="button" id="bDown" title="Descendre les lignes sélectionnées">▼ Descendre</button>
       <span class="sep" aria-hidden="true"></span>
-      <button type="button" id="bExcel" title="Enregistrer le travail dans le modèle Excel (listes déroulantes et onglets conservés)">⬇ Télécharger en Excel</button>
+      <button type="button" id="bExcel" class="excel" title="Enregistrer le travail dans le modèle Excel (listes déroulantes et onglets conservés)">⬇ Télécharger en Excel</button>
       <label class="only"><input type="checkbox" id="onlyErr"> Seulement les lignes à corriger</label>
       <span class="spacer"></span>
       <span id="saveState" class="save" role="status" aria-live="polite"></span>
