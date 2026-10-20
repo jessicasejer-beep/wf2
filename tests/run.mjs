@@ -125,7 +125,7 @@ await section('Écran 13" (1280 × 720) et thème sombre', async () => {
   await ctx.close();
 });
 
-await section('Lecture d\'un dossier de 30 fichiers (« Je commence de zéro »)', async () => {
+await section('Lecture d\'un dossier de 30 fichiers (« Je commence le travail »)', async () => {
   const { page, ctx, errors } = await newPage();
   await page.setInputFiles('#inFolderA', join(FX, 'folder30'));
   await page.waitForTimeout(300);

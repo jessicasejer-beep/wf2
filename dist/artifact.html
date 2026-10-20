@@ -113,7 +113,12 @@ section.step > h2 { margin: 0 0 12px; font-size: 19px; display: flex; align-item
   display: flex; flex-direction: column; gap: 10px; min-width: 0;
 }
 .card.drag { border-color: var(--accent); border-style: dashed; background: var(--accent-soft); }
-.card h3 { margin: 0; font-size: 17px; }
+.card h3 { margin: 0; font-size: 17px; text-wrap: balance; }
+.card-head { display: flex; align-items: center; gap: 12px; }
+.card-emoji {
+  flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px;
+  font-size: 28px; line-height: 1; background: var(--accent-soft); border: 1px solid var(--border);
+}
 .card p { margin: 0; color: var(--muted); }
 .card .btns { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .small { font-size: 13px; color: var(--muted); }
@@ -307,17 +312,17 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
     <h2 id="h1s"><span class="num">1</span> Choisir le point de départ</h2>
     <div class="cards">
       <div class="card" id="cardA">
-        <h3>Je commence le travail de zéro</h3>
-        <p>Choisissez le dossier qui contient les fichiers à importer. L'outil crée une ligne par fichier, avec le nom exact du fichier : vous n'avez plus à le recopier.</p>
-        <p class="small">Vous pouvez aussi glisser-déposer le dossier, ou une archive .zip, sur ce cadre. Si le navigateur parle de « téléverser » : rien n'est envoyé, seuls les noms des fichiers sont lus.</p>
+        <div class="card-head"><span class="card-emoji" aria-hidden="true">📂</span><h3>Je commence le travail</h3></div>
+        <p>Choisissez le dossier qui contient les fichiers à importer. L'outil crée une ligne par fichier, avec le nom exact du fichier.</p>
         <div class="btns">
           <label class="btn primary big" for="inFolderA">Choisir un dossier</label>
           <input type="file" id="inFolderA" class="sr-only" webkitdirectory directory multiple tabindex="-1">
         </div>
+        <p class="small">Glisser-déposer accepté (dossier ou .zip). Si le navigateur parle de « téléverser » : rien n'est envoyé, seuls les noms des fichiers sont lus.</p>
         <div id="boxA" class="box" role="status" aria-live="polite"></div>
       </div>
       <div class="card" id="cardB">
-        <h3>Je vérifie un travail déjà commencé</h3>
+        <div class="card-head"><span class="card-emoji" aria-hidden="true">🔍</span><h3>Je contrôle la cohérence entre mon fichier d'imports et mes ressources</h3></div>
         <p>Importez votre fichier de travail Excel (.xlsx) ou un import.csv existant : l'outil le contrôle et vous pouvez le compléter.</p>
         <div class="btns">
           <label class="btn primary big" for="inImport">Importer un fichier Excel ou CSV</label>
@@ -2009,7 +2014,7 @@ function setupDrop(card, which) {
   card.addEventListener('drop', async e => {
     e.preventDefault(); depth = 0; card.classList.remove('drag');
     const src = await pathsFromDrop(e.dataTransfer);
-    if (src.table) { if (which === 'B') importFile(src.table); else setBox($('boxA'), 'mid', 'Ceci est un tableau', '<p>Pour vérifier un fichier Excel ou CSV déjà commencé, déposez-le sur le cadre « Je vérifie un travail déjà commencé ».</p>'); return; }
+    if (src.table) { if (which === 'B') importFile(src.table); else setBox($('boxA'), 'mid', 'Ceci est un tableau', '<p>Pour vérifier un fichier Excel ou CSV déjà commencé, déposez-le sur le cadre « Je contrôle la cohérence entre mon fichier d\'imports et mes ressources ».</p>'); return; }
     handleFolderSource(src, which);
   });
 }
