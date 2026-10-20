@@ -797,7 +797,7 @@ function detectSep(text) {
   return counts[0][1] > 0 ? counts[0][0] : SEP;
 }
 function parseDelimited(text, sep) {
-  if (sep === SEP) return text.split(/\r\n|\n|\r/).map(l => l.split(SEP));
+  if (sep === SEP) return text.replace(/(\r\n|\n|\r)$/, '').split(/\r\n|\n|\r/).map(l => l.split(SEP));
   const rows = []; let row = [], cell = '', q = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
@@ -856,7 +856,7 @@ async function importFile(file) {
       if (!sheetName) { sheetName = wb.SheetNames[0]; warnSheet = true; }
       const m = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '', blankrows: false });
       res = matrixToRows(m);
-      where = `onglet « ${esc(sheetName)} »`;
+      where = `onglet « ${sheetName} »`;
       if (warnSheet) res.info.warnSheet = true;
     } else {
       const text = decodeText(await file.arrayBuffer());
@@ -869,11 +869,12 @@ async function importFile(file) {
     return;
   }
   if (!res.rows.length) {
-    setBox(box, 'mid', 'Aucune ressource trouvée', `<p>« ${esc(name)} » (${where}) ne contient aucune ligne remplie.</p>`);
+    setBox(box, 'mid', 'Aucune ressource trouvée', `<p>« ${esc(name)} » (${esc(where)}) ne contient aucune ligne remplie.</p>`);
     return;
   }
   if (hasData() && !(await askConfirm(`Remplacer le tableau actuel par le contenu de « ${name} » ? Vous pourrez revenir en arrière avec « Annuler ».`))) return;
   pushUndo();
+  const count = res.rows.length;
   S.rows = res.rows;
   ensureRows();
   S.sel = { ar: 0, ac: 0, fr: 0, fc: 0 };
@@ -884,10 +885,25 @@ async function importFile(file) {
   if (res.info.uuidIgnored) notes.push(`${plural(res.info.uuidIgnored, 'valeur uuid ignorée', 'valeurs uuid ignorées')} (la colonne uuid est toujours vide).`);
   if (res.info.skippedEmpty) notes.push(`${plural(res.info.skippedEmpty, 'ligne vide ignorée', 'lignes vides ignorées')}.`);
   if (res.info.extraCols) notes.push(`${plural(res.info.extraCols, 'valeur au-delà de la 23e colonne ignorée', 'valeurs au-delà de la 23e colonne ignorées')}.`);
-  setBox(box, notes.length ? 'mid' : 'ok', `${plural(res.rows.length, 'ressource importée', 'ressources importées')} depuis « ${esc(name)} »`,
-    `<p>${where}. Les erreurs éventuelles sont signalées dans la partie 2.</p>` + (notes.length ? '<ul>' + notes.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : ''));
-  S.lastImport = name;
+  S.lastImport = { name, where, count, at: Date.now(), notes };
+  box._sig = null;
+  renderImportBox();
+  scheduleSave();
   $('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function fmtWhen(t) {
+  const d = new Date(t || Date.now());
+  return `le ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+/* Partie 1 : rappelle seulement le dernier fichier importé (les erreurs sont listées en partie 2). */
+function renderImportBox() {
+  const L = S.lastImport, box = $('boxImport');
+  if (!L) return;
+  const html = `<p>${plural(L.count, 'ressource', 'ressources')} (${esc(L.where)}), importé ${fmtWhen(L.at)}.</p>` +
+    (L.notes && L.notes.length ? '<ul>' + L.notes.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : '');
+  if (box._sig === html) return;
+  box._sig = html;
+  setBox(box, 'info', `Dernier fichier importé : « ${esc(L.name)} »`, html);
 }
 function setBox(el, kind, title, html) {
   el.className = 'box ' + kind;
@@ -1019,7 +1035,7 @@ async function handleFolderSource(src, card) {
     return;
   }
   const folder = {
-    names: res.names, set: new Set(res.names), cache: new Map(), summary: res, label, card
+    names: res.names, set: new Set(res.names), cache: new Map(), summary: res, label, card, readAt: Date.now()
   };
   if (card === 'A') {
     if (hasData() && !(await askConfirm(`Remplacer le tableau actuel par les ${res.names.length} fichiers de « ${label} » ? Vous pourrez revenir en arrière avec « Annuler ».`))) return;
@@ -1029,12 +1045,12 @@ async function handleFolderSource(src, card) {
     S.rows = res.names.map(nm => { const r = emptyRow(); r[0] = nm; return r; });
     ensureRows();
     S.sel = { ar: 0, ac: 1, fr: 0, fc: 1 };
-    $('boxB').className = 'box'; $('boxB').innerHTML = '';
+    $('boxB').className = 'box'; $('boxB').innerHTML = ''; $('boxB')._sig = null; $('boxA')._sig = null;
     refreshAll(true);
     $('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } else {
     S.folder = folder;
-    $('boxA').className = 'box'; $('boxA').innerHTML = '';
+    $('boxA').className = 'box'; $('boxA').innerHTML = ''; $('boxA')._sig = null; $('boxB')._sig = null;
     refreshAll(false);
   }
 }
@@ -1043,48 +1059,29 @@ function referencedNames() {
   for (const r of S.rows) for (const c of FILE_COLS) { const v = normFile(r[c]); if (v) set.add(v); }
   return set;
 }
+/* Partie 1 : rappelle le dernier dossier lu (les erreurs sont listées en partie 2). */
 function renderFolderBox() {
   const F = S.folder;
   if (!F) return;
   const box = F.card === 'A' ? $('boxA') : $('boxB');
   const sm = F.summary;
-  const val = S.val;
   const ref = referencedNames();
-  const extra = F.names.filter(n => !ref.has(n));
-  const missingRows = val.errors.filter(e => e.kind === 'missing');
-  const missingNames = new Set(missingRows.map(e => normFile(S.rows[e.r][e.c])));
-  const spaced = F.names.filter(n => /\s|[^\x00-\x7F]/.test(n));
+  const extra = S.val.nonEmpty ? F.names.filter(n => !ref.has(n)) : F.names.slice();
   const notes = [];
-  if (spaced.length && missingNames.size) notes.push(`<li><strong style="display:inline">${plural(spaced.length, 'fichier du dossier a un espace ou un accent', 'fichiers du dossier ont un espace ou un accent')} dans son nom</strong> : interdit, à renommer (ex. <code>${esc(spaced[0])}</code>).</li>`);
-  if (sm.sub) notes.push(`<li><strong style="display:inline">${plural(sm.sub, 'fichier est dans un sous-dossier', 'fichiers sont dans des sous-dossiers')}</strong> : ils doivent être à la racine de l'archive. Seul leur nom a été gardé (ex. <code>${esc(sm.subNames[0])}</code>).</li>`);
+  if (sm.sub) notes.push(`<li>${plural(sm.sub, 'fichier était dans un sous-dossier', 'fichiers étaient dans des sous-dossiers')} : ils doivent être à la racine de l'archive (seul leur nom a été gardé, ex. <code>${esc(sm.subNames[0])}</code>).</li>`);
   if (sm.dups) notes.push(`<li>${plural(sm.dups, 'doublon de nom ignoré', 'doublons de nom ignorés')} (même nom dans plusieurs sous-dossiers).</li>`);
   if (sm.ignored) notes.push(`<li>${plural(sm.ignored, 'fichier système ou caché ignoré', 'fichiers système ou cachés ignorés')} (.DS_Store, Thumbs.db, import.csv…).</li>`);
-  const head = `<p>« ${esc(F.label)} » : ${plural(F.names.length, 'fichier lu', 'fichiers lus')}${F.created ? ` — ${plural(F.created, 'ligne créée', 'lignes créées')}, une par fichier, triées par nom` : ''}.</p>`;
-  let kind, title, body = '';
-  if (val.nonEmpty === 0) {
-    kind = 'mid'; title = `Le tableau est vide`;
-  } else if (missingNames.size) {
-    kind = 'bad'; title = `${plural(missingNames.size, 'nom introuvable', 'noms introuvables')} dans le dossier (cellules en rouge)`;
-    const ex = [...missingNames].slice(0, 5);
-    body += `<p>Exemples : ${ex.map(x => `<code>${esc(x)}</code>`).join(', ')}${missingNames.size > 5 ? '…' : ''}. Corrigez le nom dans le tableau (une suggestion s'affiche sur la cellule).</p>`;
-  } else if (spaced.length) {
-    kind = 'bad'; title = `${plural(spaced.length, 'fichier du dossier a un espace ou un accent', 'fichiers du dossier ont un espace ou un accent')} dans son nom : interdit`;
-    body += `<p>Exemples : ${spaced.slice(0, 5).map(x => `<code>${esc(x)}</code> → <code>${esc(safeFileName(x))}</code>`).join(', ')}${spaced.length > 5 ? '…' : ''}. Renommez-les dans le dossier, corrigez le tableau, puis choisissez à nouveau le dossier.</p>`;
-  } else if (extra.length) {
-    kind = 'mid'; title = `Tous les noms du tableau existent, mais ${plural(extra.length, 'fichier du dossier est absent', 'fichiers du dossier sont absents')} du tableau`;
-  } else {
-    kind = 'ok'; title = 'Tous les noms du tableau existent dans le dossier';
+  let html = `<p>${plural(F.names.length, 'fichier', 'fichiers')}${F.created ? `, ${plural(F.created, 'ligne créée', 'lignes créées')} (une par fichier)` : ''}, lu ${fmtWhen(F.readAt)}.</p>`;
+  if (extra.length) {
+    html += `<p>${plural(extra.length, 'fichier du dossier n\'est pas', 'fichiers du dossier ne sont pas')} dans le tableau.</p>`;
+    html += `<details><summary>Voir ${extra.length > 1 ? 'ces fichiers' : 'ce fichier'}</summary><ul>${extra.slice(0, 40).map(x => `<li><code>${esc(x)}</code></li>`).join('')}${extra.length > 40 ? '<li>…</li>' : ''}</ul></details>`;
+    html += `<button type="button" class="primary" data-act="addExtra">Ajouter ${extra.length > 1 ? `ces ${extra.length} fichiers` : 'ce fichier'} au tableau</button>`;
   }
-  if (extra.length && (val.nonEmpty === 0 || kind !== 'ok')) {
-    if (val.nonEmpty !== 0 && kind === 'bad') body += `<p>Par ailleurs, ${plural(extra.length, 'fichier du dossier est absent', 'fichiers du dossier sont absents')} du tableau.</p>`;
-    body += `<details><summary>Voir ${extra.length > 1 ? 'ces fichiers' : 'ce fichier'}</summary><ul>${extra.slice(0, 40).map(x => `<li><code>${esc(x)}</code></li>`).join('')}${extra.length > 40 ? '<li>…</li>' : ''}</ul></details>`;
-    body += `<button type="button" class="primary" data-act="addExtra">Ajouter ${extra.length > 1 ? `ces ${extra.length} fichiers` : 'ce fichier'} au tableau</button>`;
-  }
-  const html = head + body + (notes.length ? `<ul>${notes.join('')}</ul>` : '');
-  const sig = kind + title + html;
-  if (box._sig === sig) return;
-  box._sig = sig;
-  setBox(box, kind, title, html);
+  if (notes.length) html += `<ul>${notes.join('')}</ul>`;
+  const title = `Dernier dossier lu : « ${esc(F.label)} »`;
+  if (box._sig === title + html) return;
+  box._sig = title + html;
+  setBox(box, 'info', title, html);
   const b = box.querySelector('[data-act="addExtra"]');
   if (b) b.onclick = () => addFolderFiles(extra);
 }
@@ -1134,9 +1131,9 @@ function scheduleSave() {
     try {
       const rows = S.rows.filter(r => !isRowEmpty(r));
       const F = S.folder;
-      const folder = F ? { names: F.names, label: F.label, card: F.card, created: F.created || 0, summary: F.summary } : null;
+      const folder = F ? { names: F.names, label: F.label, card: F.card, created: F.created || 0, summary: F.summary, readAt: F.readAt } : null;
       if (!rows.length && !folder) localStorage.removeItem(DRAFT_KEY);
-      else localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), rows, folder }));
+      else localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), rows, folder, lastImport: S.lastImport }));
       $('saveState').textContent = rows.length ? 'Brouillon enregistré dans ce navigateur à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
     } catch (e) {
       $('saveState').textContent = 'Sauvegarde automatique indisponible dans ce navigateur : pensez à « Télécharger en Excel ».';
@@ -1152,9 +1149,10 @@ function restoreDraft() {
     S.rows = d.rows.map(r => { const x = emptyRow(); for (let c = 0; c < UUID; c++) x[c] = r[c] == null ? '' : String(r[c]); return x; });
     const f = d.folder;
     if (f && Array.isArray(f.names) && f.names.length) {
-      S.folder = { names: f.names, set: new Set(f.names), cache: new Map(), label: f.label || 'dossier', card: f.card === 'A' ? 'A' : 'B', created: f.created || 0,
+      S.folder = { names: f.names, set: new Set(f.names), cache: new Map(), label: f.label || 'dossier', card: f.card === 'A' ? 'A' : 'B', created: f.created || 0, readAt: f.readAt,
         summary: Object.assign({ ignored: 0, sub: 0, subNames: [], dups: 0 }, f.summary || {}) };
     }
+    if (d.lastImport && d.lastImport.name) S.lastImport = d.lastImport;
     if (!S.rows.length && !S.folder) return false;
     const when = new Date(d.savedAt || Date.now());
     $('draftLine').innerHTML = `<span>Travail précédent repris (enregistré le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, ${plural(S.rows.length, 'ressource', 'ressources')}${S.folder ? `, dossier « ${esc(S.folder.label)} »` : ''}).${S.folder ? ' Si vous avez renommé des fichiers depuis, choisissez à nouveau le dossier.' : ''} Pour commencer un nouvel import : bouton « Supprimer les données » en haut de la page.</span>`;
@@ -1358,6 +1356,7 @@ function refreshAll(structural) {
   renderAlerts();
   renderRecap();
   renderFolderBox();
+  renderImportBox();
   updateToolbar();
   scheduleSave();
 }

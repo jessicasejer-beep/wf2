@@ -140,7 +140,7 @@ await section('Lecture d\'un dossier de 30 fichiers (« Je commence le travail �
   const box = await page.textContent('#boxA');
   ok(/sous-dossier/.test(box) && /racine de l'archive/.test(box), 'avertissement sous-dossiers visible', box);
   ok(/ignoré/.test(box), 'fichiers ignorés signalés');
-  ok(await page.getAttribute('#boxA', 'class') === 'box ok', 'encadré vert (tous les noms existent)', await page.getAttribute('#boxA', 'class'));
+  ok(await page.getAttribute('#boxA', 'class') === 'box info' && /Dernier dossier lu : « folder30 »/.test(box) && /30\s+lignes créées/.test(box), 'partie 1 : dernier dossier lu indiqué', box);
   const v = await val(page);
   ok(v.errors.some(e => e.kind === 'req1'), 'colonnes obligatoires vides signalées');
   ok(errors.length === 0, 'aucune erreur JavaScript', errors);
@@ -167,6 +167,7 @@ await section("Aller-retour sur l'exemple import.csv (octets identiques)", async
   const rows = await rowsOf(page);
   ok(rows.length === 5, '5 ressources importées', rows.length);
   ok((await page.textContent('#boxImport')).includes('¤'), 'séparateur ¤ détecté');
+  ok(/5\s+ressources/.test(await page.textContent('#boxImport')) && !/ligne vide/.test(await page.textContent('#boxImport')), 'partie 1 : 5 ressources, pas de fausse « ligne vide »', await page.textContent('#boxImport'));
   const v = await val(page);
   ok(v.errors.length === 0, "l'exemple ne contient aucune erreur bloquante", v.errors);
   ok(await page.isEnabled('#bCsv'), 'bouton import.csv actif');
@@ -203,6 +204,10 @@ await section('Import Excel (choix de l\'onglet A1 = « Nom du fichier »)', asy
   const o = v.errors.find(e => e.r === 1 && e.c === 17);
   ok(o && /lettre O/.test(o.msg), 'lettre « O » au lieu de 0 signalée comme erreur', o);
   ok((await page.textContent('#boxImport')).includes('Travail'), 'onglet utilisé annoncé');
+  ok(/Dernier fichier importé : « travail\.xlsx »/.test(await page.textContent('#boxImport')), 'partie 1 : dernier fichier importé indiqué');
+  await page.waitForTimeout(600);
+  await page.reload(); await page.waitForTimeout(400);
+  ok(/Dernier fichier importé : « travail\.xlsx »/.test(await page.textContent('#boxImport')), 'dernier fichier importé conservé après rechargement');
   await ctx.close();
 });
 
@@ -285,7 +290,8 @@ await section('Espaces interdits dans les noms de fichiers', async () => {
   await setRows(page, []);
   await page.setInputFiles('#inFolderA', join(FX, 'folder_espaces'));
   await page.waitForTimeout(300);
-  ok(await page.getAttribute('#boxA', 'class') === 'box bad' && /espace ou un accent/.test(await page.textContent('#boxA')) && /tete\.mp4/.test(await page.textContent('#boxA')), 'dossier : encadré rouge pour les espaces et accents', await page.textContent('#boxA'));
+  ok(await page.getAttribute('#boxA', 'class') === 'box info' && !/interdit/.test(await page.textContent('#boxA')), 'partie 1 : pas d\'erreur, seulement le dernier dossier lu', await page.textContent('#boxA'));
+  ok(/Contient un espace/.test(await page.textContent('#alertBox')) && /Accents/.test(await page.textContent('#alertBox')), 'erreurs du dossier listées en partie 2');
   await ctx.close();
 });
 
@@ -299,16 +305,16 @@ await section('Contrôle par rapport au dossier (vérifier un travail)', async (
   ok(miss.some(e => e.r === 1 && /Vouliez-vous dire « doc1\.pdf »/.test(e.msg)), 'nom introuvable + suggestion (Levenshtein)', miss);
   ok(miss.some(e => e.r === 2 && /majuscules/.test(e.msg)), 'différence de majuscules signalée');
   ok(miss.some(e => e.r === 3 && e.c === 13) && !miss.some(e => e.r === 3 && e.c === 12), 'fichiers compagnons vérifiés');
-  ok(await page.getAttribute('#boxB', 'class') === 'box bad', 'encadré rouge');
-  ok(/3\s+noms introuvables/.test(await page.textContent('#boxB')), 'nombre de noms introuvables', await page.textContent('#boxB'));
+  ok(await page.getAttribute('#boxB', 'class') === 'box info' && /Dernier dossier lu/.test(await page.textContent('#boxB')), 'partie 1 : dernier dossier lu, sans erreur');
+  const missGroup = await page.locator('#alertBox .groups li', { hasText: 'Fichier introuvable' }).textContent();
+  ok(/^3\s+erreurs/.test(missGroup), 'partie 2 : 3 fichiers introuvables', missGroup);
   // Ajouter les fichiers absents
   await setRows(page, [fullRow({ 0: 'doc1.pdf', 1: 'A' })]);
-  const cls = await page.getAttribute('#boxB', 'class');
-  ok(cls === 'box mid', 'encadré jaune : fichiers du dossier absents du tableau', cls);
+  ok(/29\s+fichiers du dossier ne sont pas dans le tableau/.test(await page.textContent('#boxB')), 'fichiers du dossier absents du tableau signalés', await page.textContent('#boxB'));
   await page.click('#boxB [data-act="addExtra"]');
   const rows = await rowsOf(page);
   ok(rows.length === 30 && rows.filter(r => r[0] === 'doc1.pdf').length === 1, 'bouton « Ajouter ces N fichiers au tableau »', rows.length);
-  ok(await page.getAttribute('#boxB', 'class') === 'box ok', 'encadré vert ensuite');
+  ok(await page.locator('#boxB [data-act="addExtra"]').count() === 0, 'plus de fichiers à ajouter ensuite');
   await ctx.close();
 });
 
