@@ -246,7 +246,9 @@ await section('Contrôles : chaque type d\'erreur', async () => {
   ok(await page.isDisabled('#bCsv'), 'téléchargement bloqué tant qu\'il reste des erreurs');
   const alertTxt = await page.textContent('#alertBox');
   ok(/erreurs bloquantes/.test(alertTxt) && await page.getAttribute('#alertBox', 'role') === 'alert', 'bandeau rouge role="alert"');
-  ok(await page.locator('#alertBox .chip').count() > 0, 'pastilles de synthèse');
+  ok(await page.locator('#alertBox .groups li').count() > 0, 'erreurs regroupées par type');
+  const dupGroup = await page.locator('#alertBox .groups li', { hasText: 'Nom du fichier en double' }).textContent();
+  ok(/^2\s+erreurs/.test(dupGroup) && /L1, L3/.test(dupGroup), 'groupe « en double » : nombre + lignes L1, L3', dupGroup);
   ok(await page.locator('#body td.c-dup').count() === 2 && await page.locator('#body td.c-err').count() > 0 && await page.locator('#body td.c-warn').count() > 0, 'couleurs rouge / orange / jaune dans le tableau');
   // Erreur suivante
   await page.click('#alertBox [data-act="next"]');
@@ -269,7 +271,10 @@ await section('Espaces interdits dans les noms de fichiers', async () => {
   ok(v.errors.some(e => e.r === 0 && e.c === 0 && e.kind === 'space' && e.lvl === 'err' && /mon_fichier\.pdf/.test(e.msg)), 'espace dans le nom du fichier = erreur rouge + suggestion', v.errors);
   ok(v.errors.some(e => e.r === 0 && e.c === 13 && e.kind === 'space'), 'espace dans un fichier compagnon = erreur');
   ok(await page.locator('#c0_0.c-err').count() === 1, 'cellule en rouge');
-  ok(/Espaces dans les noms de fichiers/.test(await page.textContent('#alertBox')), 'pastille dans le bandeau');
+  const sp = await page.locator('#alertBox .groups li', { hasText: 'Contient un espace' }).textContent();
+  ok(/^2\s+erreurs/.test(sp) && /L1/.test(sp), 'groupe « contient un espace » dans le bandeau (2 erreurs, ligne L1)', sp);
+  await page.click('#alertBox .groups li:has-text("Contient un espace") .linkish');
+  ok(await page.evaluate(() => window.__wf.S.sel.fr) === 0, 'clic sur L1 : va à la cellule');
   ok(await page.isDisabled('#bCsv'), 'téléchargement bloqué');
   // Accents et caractères spéciaux
   await setRows(page, [fullRow({ 0: 'Qu-y-a-t-il-dans-ta-t\u00eate.mp4', 1: 'A' }), fullRow({ 0: 'te\uFFFDte.mp4', 1: 'B' }), fullRow({ 0: 'n\u00b01_\u0153uvre.pdf', 1: 'C' }), fullRow({ 0: 'ok-1.pdf', 1: 'D', 19: 'mini\u00e9.jpg' })]);
@@ -280,7 +285,7 @@ await section('Espaces interdits dans les noms de fichiers', async () => {
   ok(acc.some(e => e.r === 2 && /n1_oeuvre\.pdf/.test(e.msg)), '° et œ interdits, proposition « n1_oeuvre.pdf »');
   ok(acc.some(e => e.r === 3 && e.c === 19), 'accent dans un fichier compagnon = erreur');
   ok(!v.errors.some(e => e.kind === 'latin1' && e.c === 0), 'pas de double erreur sur le même nom');
-  ok(/Accents ou caractères spéciaux/.test(await page.textContent('#alertBox')), 'pastille « Accents » dans le bandeau');
+  ok(/Accents ou caractères spéciaux/.test(await page.textContent('#alertBox')), 'groupe « Accents » dans le bandeau');
   // Dossier contenant un nom avec espace : encadré rouge
   await setRows(page, []);
   await page.setInputFiles('#inFolderA', join(FX, 'folder_espaces'));

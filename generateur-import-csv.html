@@ -164,8 +164,13 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   border: 1px solid currentColor; background: var(--surface); color: inherit; border-radius: 999px;
   padding: 3px 11px; font-size: 13.5px; font-weight: 600;
 }
-.alert ul, .warnings ul { margin: 8px 0 0; padding-left: 0; list-style: none; }
-.alert li, .warnings li { margin: 2px 0; }
+.groups { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.groups li { line-height: 1.5; padding: 6px 10px; border-radius: 6px; background: var(--surface); border: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 30%, transparent); }
+.groups .gcount { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.groups .glabel { font-weight: 600; }
+.groups .gcols { font-size: 13px; opacity: 0.85; }
+.groups .glines .linkish { font-variant-numeric: tabular-nums; }
+.ghint { margin: 8px 0 0; font-size: 13px; opacity: 0.9; }
 .linkish {
   background: none; border: none; padding: 1px 0; color: inherit; text-decoration: underline; text-align: left;
   font-size: 14px; cursor: pointer; display: inline;
@@ -347,7 +352,7 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
   <section class="step" aria-labelledby="h2s" id="step2">
     <h2 id="h2s"><span class="num">2</span> Compléter le tableau</h2>
     <div id="alertBox" class="alert" role="alert" aria-live="assertive"></div>
-    <details id="warnBox" class="warnings" hidden><summary id="warnSum"></summary><ul id="warnList"></ul></details>
+    <details id="warnBox" class="warnings" hidden><summary id="warnSum"></summary><div id="warnList"></div></details>
 
     <div class="legend" aria-label="Légende des couleurs">
       <span><span class="sw req"></span>En-tête bleu : colonne obligatoire</span>
@@ -596,12 +601,12 @@ function validate() {
   let nonEmpty = 0, emptyCount = 0;
   const fileMap = new Map(), titleMap = new Map();
   const F = S.folder;
-  function add(r, c, lvl, msg, kind) {
+  function add(r, c, lvl, msg, kind, grp) {
     if (!issues[r]) issues[r] = {};
     const cur = issues[r][c];
     if (!cur) issues[r][c] = { lvl, msgs: [msg] };
     else { cur.msgs.push(msg); if (RANK[lvl] > RANK[cur.lvl]) cur.lvl = lvl; }
-    const item = { r, c, lvl, msg, kind };
+    const item = { r, c, lvl, msg, kind, grp: grp || msg };
     (lvl === 'warn' ? warnings : errors).push(item);
     if (lvl !== 'warn') {
       const ch = chips.get(kind) || { n: 0, first: item };
@@ -619,7 +624,7 @@ function validate() {
     for (const c of REQ) {
       if (v[c] !== '') continue;
       if (c === 4 && EXEMPT_TITLES.has(v[1].toLowerCase())) continue;
-      add(r, c, 'err', `${plainName(c)} : obligatoire, la cellule est vide.`, 'req' + c);
+      add(r, c, 'err', `${plainName(c)} : obligatoire, la cellule est vide.`, 'req' + c, 'Colonne obligatoire vide');
     }
     // Listes
     COLS.forEach((col, c) => {
@@ -635,18 +640,20 @@ function validate() {
         const s = closest(v[c], PICTOS, null);
         msg = `Picto : « ${v[c]} » n'est pas dans la liste des pictos.` + (s ? ` Vouliez-vous dire « ${s} » ?` : ' Choisir dans le menu déroulant.');
       } else msg = `${plainName(c)} : « ${v[c]} » n'est pas dans la liste (${LISTS[col.list].map(o => o.v).join(', ')}).`;
-      add(r, c, 'err', msg, 'list');
+      add(r, c, 'err', msg, 'list', col.list === 'zeroun' ? `${plainName(c)} : seulement le chiffre 0 (non) ou 1 (oui)`
+        : col.list === 'picto' ? 'Picto : valeur absente de la liste des pictos (choisir dans le menu déroulant)'
+        : `${plainName(c)} : valeur hors de la liste (${LISTS[col.list].map(o => o.v).join(', ')}), majuscules comprises`);
     });
     // Nom du fichier
     const f = v[0];
     if (f !== '') {
       const isUrl = /^https?:\/\//i.test(f);
       if (isUrl) {
-        if (!/^https:\/\//.test(f)) add(r, 0, 'err', 'Nom du fichier : une adresse web doit commencer par « https:// ».', 'format');
-        else if (/\s/.test(f)) add(r, 0, 'err', "Nom du fichier : l'adresse web contient un espace.", 'format');
+        if (!/^https:\/\//.test(f)) add(r, 0, 'err', 'Nom du fichier : une adresse web doit commencer par « https:// ».', 'format', 'Nom du fichier : une adresse web doit commencer par « https:// »');
+        else if (/\s/.test(f)) add(r, 0, 'err', "Nom du fichier : l'adresse web contient un espace.", 'format', "Nom du fichier : l'adresse web contient un espace");
       } else {
         checkFileName(r, 0, f, add);
-        if (!/\.[A-Za-z0-9]+$/.test(f) || /^\.[^.]*$/.test(f)) add(r, 0, 'err', "Nom du fichier : l'extension manque (ex. « .pdf », « .mp4 ») — ou indiquer une adresse commençant par https://.", 'format');
+        if (!/\.[A-Za-z0-9]+$/.test(f) || /^\.[^.]*$/.test(f)) add(r, 0, 'err', "Nom du fichier : l'extension manque (ex. « .pdf », « .mp4 ») — ou indiquer une adresse commençant par https://.", 'format', "Nom du fichier : l'extension manque (ex. « .pdf », « .mp4 »), ou adresse https:// attendue");
         if (F) checkInFolder(r, 0, f, add);
       }
       const key = f.toLowerCase();
@@ -656,14 +663,14 @@ function validate() {
     // Fichiers compagnons
     for (const c of FILE_COLS) {
       if (c === 0 || v[c] === '') continue;
-      if (/^https?:\/\//i.test(v[c])) { add(r, c, 'warn', `${plainName(c)} : un nom de fichier est attendu, pas une adresse web.`, 'format'); continue; }
+      if (/^https?:\/\//i.test(v[c])) { add(r, c, 'warn', `${plainName(c)} : un nom de fichier est attendu, pas une adresse web.`, 'format', `${plainName(c)} : un nom de fichier est attendu, pas une adresse web`); continue; }
       checkFileName(r, c, v[c], add);
       const e = extOf(v[c]);
-      if (!COLS[c].ext.includes(e)) add(r, c, 'warn', `${plainName(c)} : extension attendue ${COLS[c].ext.map(x => '.' + x).join(' ou ')}${e ? ` (ici .${e})` : ''}.`, 'ext');
+      if (!COLS[c].ext.includes(e)) add(r, c, 'warn', `${plainName(c)} : extension attendue ${COLS[c].ext.map(x => '.' + x).join(' ou ')}${e ? ` (ici .${e})` : ''}.`, 'ext', `${plainName(c)} : extension attendue ${COLS[c].ext.map(x => '.' + x).join(' ou ')}`);
       if (F) checkInFolder(r, c, v[c], add);
     }
     // iFrame
-    if (v[21] !== '' && !/^\d+\/\d+$/.test(v[21])) add(r, 21, 'warn', `iFrame : format attendu largeur/hauteur en pixels, par exemple 800/600 (ici « ${v[21]} »).`, 'format');
+    if (v[21] !== '' && !/^\d+\/\d+$/.test(v[21])) add(r, 21, 'warn', `iFrame : format attendu largeur/hauteur en pixels, par exemple 800/600 (ici « ${v[21]} »).`, 'format', 'iFrame : format attendu largeur/hauteur en pixels, par exemple 800/600');
     // Titre (doublons plus bas)
     if (v[1] !== '') { const k = v[1].toLowerCase(); if (!titleMap.has(k)) titleMap.set(k, []); titleMap.get(k).push(r); }
     // Latin-1
@@ -674,17 +681,17 @@ function validate() {
         let msg = `${plainName(c)} : caractère${bad.length > 1 ? 's' : ''} non accepté${bad.length > 1 ? 's' : ''} par l'import : ${bad.map(ch => `« ${ch} » (${cp(ch)}${CHAR_NAMES[ch] ? ', ' + CHAR_NAMES[ch] : ''})`).join(', ')}.`;
         if (bad.includes('\uFFFD')) msg += " Ce signe remplace une lettre perdue lors d'une conversion (copier-coller depuis un PDF ou un site, fichier mal encodé) : c'était souvent un accent ou une apostrophe. Retapez le mot concerné.";
         else msg += ' À remplacer ou supprimer.';
-        add(r, c, 'err', msg, 'latin1');
+        add(r, c, 'err', msg, 'latin1', `${plainName(c)} : caractère non accepté par l'import (à retaper ou supprimer)`);
       }
     }
   }
   for (const list of fileMap.values()) {
     if (list.length < 2) continue;
-    for (const r of list) add(r, 0, 'dup', `Nom du fichier en double (lignes ${list.map(x => x + 1).join(', ')}) : interdit, chaque fichier ne doit apparaître qu'une fois.`, 'dup');
+    for (const r of list) add(r, 0, 'dup', `Nom du fichier en double (lignes ${list.map(x => x + 1).join(', ')}) : interdit, chaque fichier ne doit apparaître qu'une fois.`, 'dup', "Nom du fichier en double : interdit, chaque fichier ne doit apparaître qu'une fois");
   }
   for (const list of titleMap.values()) {
     if (list.length < 2) continue;
-    for (const r of list) add(r, 1, 'warn', `Titre identique sur les lignes ${list.map(x => x + 1).join(', ')} : autorisé, à vérifier.`, 'duptitle');
+    for (const r of list) add(r, 1, 'warn', `Titre identique sur les lignes ${list.map(x => x + 1).join(', ')} : autorisé, à vérifier.`, 'duptitle', 'Titre identique sur plusieurs lignes : autorisé, à vérifier');
   }
   const byPos = (a, b) => a.r - b.r || a.c - b.c;
   errors.sort(byPos); warnings.sort(byPos);
@@ -700,11 +707,11 @@ function checkFileName(r, c, f, add) {
     let msg = `${plainName(c)} : accents et caractères spéciaux interdits dans un nom de fichier (ici ${shown}).`;
     if (special.some(ch => ch === '\uFFFD' || ch.codePointAt(0) > 255)) msg += " Ce nom a probablement été abîmé : une lettre accentuée perdue lors d'une copie entre Mac et Windows ou d'une compression .zip.";
     msg += ` Renommez le fichier dans le dossier ET dans le tableau, par exemple « ${safeFileName(f)} ».`;
-    add(r, c, 'err', msg, 'accent');
+    add(r, c, 'err', msg, 'accent', 'Accents ou caractères spéciaux interdits dans un nom de fichier (é, ç, °, œ…)');
   }
-  if (/\s/.test(f)) add(r, c, 'err', `${plainName(c)} : « ${f} » contient un espace, interdit dans un nom de fichier. Renommez le fichier dans le dossier ET dans le tableau, par exemple « ${f.replace(/\s+/g, '_')} ».`, 'space');
-  if (/[\/\\]/.test(f)) add(r, c, 'err', `${plainName(c)} : uniquement le nom du fichier, sans dossier (« / » ou « \\ ») : les fichiers sont à la racine de l'archive.`, 'format');
-  if (/[\u0000-\u001F¤]/.test(f)) add(r, c, 'err', `${plainName(c)} : le nom contient un caractère interdit (¤, tabulation ou retour à la ligne).`, 'format');
+  if (/\s/.test(f)) add(r, c, 'err', `${plainName(c)} : « ${f} » contient un espace, interdit dans un nom de fichier. Renommez le fichier dans le dossier ET dans le tableau, par exemple « ${f.replace(/\s+/g, '_')} ».`, 'space', 'Contient un espace, interdit dans un nom de fichier');
+  if (/[\/\\]/.test(f)) add(r, c, 'err', `${plainName(c)} : uniquement le nom du fichier, sans dossier (« / » ou « \\ ») : les fichiers sont à la racine de l'archive.`, 'format', "Nom de fichier avec un dossier (« / » ou « \\ ») : les fichiers doivent être à la racine de l'archive");
+  if (/[\u0000-\u001F¤]/.test(f)) add(r, c, 'err', `${plainName(c)} : le nom contient un caractère interdit (¤, tabulation ou retour à la ligne).`, 'format', 'Nom de fichier avec un caractère interdit (¤, tabulation ou retour à la ligne)');
 }
 function checkInFolder(r, c, f, add) {
   const F = S.folder;
@@ -713,7 +720,7 @@ function checkInFolder(r, c, f, add) {
   let msg = `${plainName(c)} : « ${f} » est introuvable dans le dossier choisi (l'import refuserait la ligne : fichier non présent dans l'archive).`;
   if (s && s.toLowerCase() === f.toLowerCase()) msg += ` Différence de majuscules / minuscules : vouliez-vous dire « ${s} » ?`;
   else if (s) msg += ` Vouliez-vous dire « ${s} » ?`;
-  add(r, c, 'err', msg, 'missing');
+  add(r, c, 'err', msg, 'missing', "Fichier introuvable dans le dossier choisi (l'import refuserait la ligne : fichier non présent dans l'archive)");
 }
 
 /* ======================================================================
@@ -1367,13 +1374,29 @@ function afterEdit() {
 /* ======================================================================
    Messages d'erreur (partie 2) et récapitulatif (partie 3)
    ====================================================================== */
-const KIND_LABEL = {
-  list: 'Valeurs hors liste', dup: 'Noms de fichier en double', missing: 'Fichiers introuvables dans le dossier',
-  latin1: 'Caractères non acceptés', format: 'Format incorrect', space: 'Espaces dans les noms de fichiers', accent: 'Accents ou caractères spéciaux dans les noms de fichiers'
-};
-function chipLabel(kind, n) {
-  if (kind.startsWith('req')) return `${plainName(+kind.slice(3))} vide : ${n}`;
-  return `${KIND_LABEL[kind] || kind} : ${n}`;
+/* Regroupe les erreurs (ou avertissements) par type : « N erreurs — libellé : L16, L17… » */
+function groupIssues(items) {
+  const groups = new Map();
+  for (const e of items) {
+    let g = groups.get(e.grp);
+    if (!g) { g = { label: e.grp, n: 0, rows: new Map(), first: e.r * 100 + e.c, showCols: e.kind.startsWith('req') }; groups.set(e.grp, g); }
+    g.n++;
+    if (!g.rows.has(e.r)) g.rows.set(e.r, { e, cols: [] });
+    g.rows.get(e.r).cols.push(e.c);
+  }
+  return [...groups.values()].sort((a, b) => b.n - a.n || a.first - b.first);
+}
+const MAX_LINES_SHOWN = 60;
+const SHORT = ['Nom du fichier', 'Titre', 'Titre alternatif', 'Applet', 'Niveau principal', 'Sous-niveau', 'Sous-sous-niveau', 'Catégorie', 'Description',
+  'Picto', 'Profil', 'Téléchargement', 'Audiodescription', 'Sous-titres', 'Transcription', 'Langue', 'Intégrale prof.', 'Méthode', 'N° de page',
+  'Miniature', 'Watermark', 'iFrame', 'uuid'];
+function groupsHtml(items, word) {
+  return '<ul class="groups">' + groupIssues(items).map(g => {
+    const rows = [...g.rows.values()];
+    const links = rows.slice(0, MAX_LINES_SHOWN).map(({ e, cols }) => `<button type="button" class="linkish" data-r="${e.r}" data-c="${e.c}" title="${esc(e.msg)}">L${e.r + 1}</button>${g.showCols ? ` <span class="gcols">(${esc(cols.map(c => SHORT[c]).join(', '))})</span>` : ''}`).join(', ');
+    const more = rows.length > MAX_LINES_SHOWN ? ` … et ${rows.length - MAX_LINES_SHOWN} autres lignes` : '';
+    return `<li><span class="gcount">${plural(g.n, word[0], word[1])}</span> · <span class="glabel">${esc(g.label)}</span> : <span class="glines">${links}${more}</span></li>`;
+  }).join('') + '</ul>';
 }
 function renderAlerts() {
   const val = S.val, box = $('alertBox');
@@ -1385,15 +1408,10 @@ function renderAlerts() {
   } else {
     cls = 'alert';
     const rowsBad = new Set(val.errors.map(e => e.r)).size;
-    const chipsArr = [...val.chips.entries()].sort((a, b) => {
-      const ka = a[0].startsWith('req') ? +a[0].slice(3) : 100, kb = b[0].startsWith('req') ? +b[0].slice(3) : 100;
-      return ka - kb;
-    });
     html = `<div class="head"><h3>⚠ ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')} : import.csv ne peut pas encore être téléchargé</h3>
       <button type="button" class="primary" data-act="next">Erreur suivante ▸</button></div>
-      <div class="chips">${chipsArr.map(([k, ch]) => `<button type="button" class="chip" data-r="${ch.first.r}" data-c="${ch.first.c}" title="Aller à la première">${esc(chipLabel(k, ch.n))}</button>`).join('')}</div>
-      <ul>${val.errors.slice(0, 5).map(e => `<li><button type="button" class="linkish" data-r="${e.r}" data-c="${e.c}">Ligne ${e.r + 1}</button> — ${esc(e.msg)}</li>`).join('')}
-      ${val.errors.length > 5 ? `<li>… et ${val.errors.length - 5} autre${val.errors.length - 5 > 1 ? 's' : ''} (bouton « Erreur suivante » ou case « Seulement les lignes à corriger »).</li>` : ''}</ul>`;
+      ${groupsHtml(val.errors, ['erreur', 'erreurs'])}
+      <p class="ghint">Cliquez sur un numéro de ligne (L16…) pour aller à la cellule ; le détail et la correction proposée s'affichent sur la cellule.</p>`;
   }
   if (box._sig !== html) {
     box._sig = html; box.className = cls; box.innerHTML = html;
@@ -1406,7 +1424,7 @@ function renderAlerts() {
     wb.hidden = false;
     const sum = `${plural(val.warnings.length, 'avertissement', 'avertissements')} (non bloquant${val.warnings.length > 1 ? 's' : ''}, à vérifier)`;
     if ($('warnSum').textContent !== sum) $('warnSum').textContent = sum;
-    const lh = val.warnings.slice(0, 80).map(e => `<li><button type="button" class="linkish" data-r="${e.r}" data-c="${e.c}">Ligne ${e.r + 1}</button> — ${esc(e.msg)}</li>`).join('') + (val.warnings.length > 80 ? '<li>…</li>' : '');
+    const lh = groupsHtml(val.warnings, ['avertissement', 'avertissements']);
     const wl = $('warnList'); if (wl._sig !== lh) { wl._sig = lh; wl.innerHTML = lh; }
   }
 }
