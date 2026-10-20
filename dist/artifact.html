@@ -1402,8 +1402,7 @@ function renderAlerts() {
   } else {
     cls = 'alert';
     const rowsBad = new Set(val.errors.map(e => e.r)).size;
-    html = `<div class="head"><h3>⚠ ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')} : import.csv ne peut pas encore être téléchargé</h3>
-      <button type="button" class="primary" data-act="next">Erreur suivante ▸</button></div>
+    html = `<div class="head"><h3>⚠ ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')} : import.csv ne peut pas encore être téléchargé</h3></div>
       ${groupsHtml(val.errors, ['erreur', 'erreurs'])}
       <p class="ghint">Cliquez sur un numéro de ligne (L16…) pour aller à la cellule ; le détail et la correction proposée s'affichent sur la cellule.</p>`;
   }
@@ -1450,15 +1449,7 @@ function gotoCell(r, c) {
   scrollToActive();
   updateBubble();
 }
-function nextError() {
-  const errs = S.val.errors; if (!errs.length) return;
-  const curR = S.view[S.sel.fr] ?? -1, curC = S.sel.fc;
-  const nx = errs.find(e => e.r > curR || (e.r === curR && e.c > curC)) || errs[0];
-  gotoCell(nx.r, nx.c);
-}
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-act="next"]');
-  if (t) { nextError(); return; }
   const g = e.target.closest('#alertBox [data-r], #warnList [data-r]');
   if (g) gotoCell(+g.dataset.r, +g.dataset.c);
 });

@@ -250,12 +250,7 @@ await section('Contrôles : chaque type d\'erreur', async () => {
   const dupGroup = await page.locator('#alertBox .groups li', { hasText: 'Nom du fichier en double' }).textContent();
   ok(/^2\s+erreurs/.test(dupGroup) && /L1, L3/.test(dupGroup), 'groupe « en double » : nombre + lignes L1, L3', dupGroup);
   ok(await page.locator('#body td.c-dup').count() === 2 && await page.locator('#body td.c-err').count() > 0 && await page.locator('#body td.c-warn').count() > 0, 'couleurs rouge / orange / jaune dans le tableau');
-  // Erreur suivante
-  await page.click('#alertBox [data-act="next"]');
-  const s1 = await page.evaluate(() => ({ ...window.__wf.S.sel }));
-  await page.click('#alertBox [data-act="next"]');
-  const s2 = await page.evaluate(() => ({ ...window.__wf.S.sel }));
-  ok(JSON.stringify(s1) !== JSON.stringify(s2), '« Erreur suivante » avance', [s1, s2]);
+  ok(await page.locator('#alertBox button.primary').count() === 0, 'plus de bouton « Erreur suivante »');
   // Filtre lignes à corriger
   await page.check('#onlyErr');
   const shown = await page.locator('#body tr').count();
