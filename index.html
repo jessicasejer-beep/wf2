@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanban Projets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --column: #eef0f3;
+    --text: #1d2130;
+    --muted: #6b7280;
+    --border: #e3e6eb;
+    --accent: #5b4cf0;
+    --accent-soft: #ecebfe;
+    --danger: #e5484d;
+    --danger-soft: #fdecec;
+    --warn: #f5a524;
+    --warn-soft: #fff4e0;
+    --ok: #30a46c;
+    --ok-soft: #e7f6ee;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+    --shadow-lg: 0 12px 32px rgba(16,24,40,.18);
+    --radius: 12px;
+  }
+  :root[data-theme="dark"] {
+    --bg: #12141a;
+    --surface: #1c1f27;
+    --column: #171a21;
+    --text: #e8eaf0;
+    --muted: #9aa1b2;
+    --border: #2a2f3a;
+    --accent: #8b80ff;
+    --accent-soft: #2a2752;
+    --danger: #ff6b6f;
+    --danger-soft: #3a1f22;
+    --warn: #ffb547;
+    --warn-soft: #3a2d17;
+    --ok: #4cc38a;
+    --ok-soft: #173326;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 20px 18px 14px; font-weight: 700; font-size: 16px; }
+  .brand-logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: #fff; }
+  .side-section { padding: 6px 12px; }
+  .side-title { display: flex; align-items: center; justify-content: space-between; padding: 8px 6px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .projects { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+  .project-item {
+    display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 8px; cursor: pointer; user-select: none; position: relative;
+  }
+  .project-item:hover { background: var(--column); }
+  .project-item.active { background: var(--accent-soft); }
+  .project-item .dot { width: 12px; height: 12px; border-radius: 4px; }
+  .project-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .project-item .count { color: var(--muted); font-size: 12px; }
+  .project-item .progress { grid-column: 2 / 4; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; }
+  .project-item .progress > span { display: block; height: 100%; }
+  .project-item .edit-btn { display: none; }
+  .project-item:hover .count { display: none; }
+  .project-item:hover .edit-btn { display: inline-grid; }
+  .all-item { grid-template-columns: 12px 1fr auto; }
+  .side-footer { border-top: 1px solid var(--border); padding: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ---------- Main ---------- */
+  .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 16px 24px; flex-wrap: wrap; }
+  .topbar.filters { padding-top: 0; }
+  .topbar h1 { font-size: 20px; margin: 0 12px 0 0; display: flex; align-items: center; gap: 10px; }
+  .topbar h1 .dot { width: 14px; height: 14px; border-radius: 4px; }
+  .spacer { flex: 1; }
+  .search {
+    display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0 10px; height: 36px; min-width: 200px;
+  }
+  .search input { border: 0; outline: 0; background: transparent; width: 100%; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); font-weight: 500; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+  .btn.small { height: 30px; padding: 0 10px; font-size: 13px; }
+  .btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .icon-btn { width: 28px; height: 28px; display: inline-grid; place-items: center; border: 0; background: transparent; border-radius: 6px; color: var(--muted); }
+  .icon-btn:hover { background: var(--column); color: var(--text); }
+  select.btn { padding-right: 8px; }
+  svg { width: 16px; height: 16px; flex: none; }
+
+  .stats { display: flex; gap: 12px; padding: 0 24px 14px; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; min-width: 130px; }
+  .stat .v { font-size: 20px; font-weight: 700; }
+  .stat .l { color: var(--muted); font-size: 12px; }
+  .stat.danger .v { color: var(--danger); }
+
+  /* ---------- Board ---------- */
+  .board { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(280px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
+  .column { background: var(--column); border-radius: 14px; display: flex; flex-direction: column; min-height: 0; }
+  .col-head { padding: 14px 14px 10px; }
+  .col-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .col-title .bullet { width: 8px; height: 8px; border-radius: 50%; }
+  .col-title .badge { background: var(--surface); color: var(--muted); border-radius: 20px; padding: 1px 8px; font-size: 12px; }
+  .col-title .icon-btn { margin-left: auto; background: var(--accent-soft); color: var(--accent); }
+  .col-line { height: 3px; border-radius: 3px; margin-top: 12px; }
+  .cards { flex: 1; overflow-y: auto; padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 12px; min-height: 80px; }
+  .cards.drag-over { background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 0 0 14px 14px; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 8px; font-size: 13px; border: 1.5px dashed var(--border); border-radius: 10px; }
+
+  .card {
+    background: var(--surface); border-radius: var(--radius); padding: 14px 14px 12px; box-shadow: var(--shadow);
+    border-left: 4px solid var(--pc, var(--accent)); cursor: grab; position: relative;
+  }
+  .card:hover { box-shadow: var(--shadow-lg); }
+  .card.dragging { opacity: .4; }
+  .card.placeholder-before::before, .card.placeholder-after::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px; background: var(--accent);
+  }
+  .card.placeholder-before::before { top: -8px; }
+  .card.placeholder-after::after { bottom: -8px; }
+  .card-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card-top .icon-btn { margin-left: auto; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
+  .pill.low { background: var(--warn-soft); color: #c27c0e; }
+  .pill.medium { background: var(--accent-soft); color: var(--accent); }
+  .pill.high { background: var(--danger-soft); color: var(--danger); }
+  .pill.done { background: var(--ok-soft); color: var(--ok); }
+  :root[data-theme="dark"] .pill.low { color: var(--warn); }
+  .proj-pill { background: color-mix(in srgb, var(--pc) 14%, transparent); color: var(--pc); }
+  .card h3 { margin: 10px 0 4px; font-size: 15px; line-height: 1.3; }
+  .card.is-done h3 { text-decoration: line-through; color: var(--muted); }
+  .card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+  .tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .tag { font-size: 11px; background: var(--column); color: var(--muted); padding: 2px 7px; border-radius: 20px; }
+  .card-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+  .card-foot .meta { display: inline-flex; align-items: center; gap: 4px; }
+  .card-foot .meta.overdue { color: var(--danger); font-weight: 600; }
+  .card-foot .meta.soon { color: #c27c0e; font-weight: 600; }
+  .mini-progress { flex: 1; min-width: 50px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .mini-progress span { display: block; height: 100%; background: var(--ok); }
+
+  /* ---------- Menu ---------- */
+  .menu {
+    position: fixed; z-index: 50; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: var(--shadow-lg); padding: 6px; min-width: 190px;
+  }
+  .menu button { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; }
+  .menu button:hover { background: var(--column); }
+  .menu button.danger { color: var(--danger); }
+  .menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+  .menu .menu-label { color: var(--muted); font-size: 11px; text-transform: uppercase; padding: 6px 10px 2px; }
+
+  /* ---------- Modal ---------- */
+  .overlay { position: fixed; inset: 0; background: rgba(15,18,30,.45); display: grid; place-items: center; z-index: 40; padding: 16px; }
+  .modal { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-lg); width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+  .modal header { display: flex; align-items: center; padding: 18px 20px 6px; }
+  .modal header h2 { margin: 0; font-size: 17px; flex: 1; }
+  .modal .body { padding: 10px 20px; overflow-y: auto; display: grid; gap: 14px; }
+  .modal footer { display: flex; gap: 8px; padding: 14px 20px 18px; border-top: 1px solid var(--border); margin-top: 6px; }
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .field input[type=text], .field input[type=date], .field select, .field textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; background: var(--surface); outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .swatch { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; outline: 2px solid transparent; }
+  .swatch.selected { outline-color: var(--text); border-color: var(--surface); }
+  .swatch-custom { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; background: var(--surface); }
+  .checklist { display: grid; gap: 6px; }
+  .check-item { display: flex; align-items: center; gap: 8px; }
+  .check-item input[type=text] { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--surface); }
+  .check-item.done input[type=text] { text-decoration: line-through; color: var(--muted); }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { border: 1px solid var(--border); background: var(--surface); padding: 6px 12px; border-radius: 8px; }
+  .seg button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .hint { color: var(--muted); font-size: 12px; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow-lg); z-index: 60; display: flex; gap: 12px; align-items: center; }
+  .toast button { background: transparent; border: 0; color: var(--accent); font-weight: 700; }
+  :root:not([data-theme="dark"]) .toast button { color: #b3abff; }
+
+  .menu-toggle { display: none; }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; inset: 0 auto 0 0; width: 280px; z-index: 30; transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow-lg); }
+    .sidebar.open { transform: none; }
+    .menu-toggle { display: inline-grid; }
+    .topbar { padding: 12px 16px; }
+    .topbar.filters { padding-top: 0; }
+    .topbar h1 { font-size: 17px; }
+    .main { overflow-x: hidden; }
+    .stats { padding: 0 16px 12px; }
+    .board { padding: 0 16px 16px; grid-template-columns: repeat(3, minmax(270px, 85vw)); }
+    .search { min-width: 0; flex: 1 1 160px; }
+    .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg></div>
+      Mes projets
+    </div>
+    <div class="side-section">
+      <div class="side-title">Projets <button class="icon-btn" id="addProjectBtn" title="Nouveau projet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+    </div>
+    <div class="projects" id="projectList"></div>
+    <div class="side-footer">
+      <button class="btn small" id="exportBtn" title="Télécharger une sauvegarde JSON"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Exporter</button>
+      <button class="btn small" id="importBtn" title="Restaurer depuis une sauvegarde JSON"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0-4 4m4-4 4 4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>Importer</button>
+      <button class="btn small" id="themeBtn" title="Thème clair / sombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="icon-btn menu-toggle" id="menuToggle" title="Projets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <h1 id="boardTitle">Tous les projets</h1>
+      <div class="spacer"></div>
+      <button class="btn primary" id="addTaskBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Nouvelle tâche</button>
+    </div>
+    <div class="topbar filters">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="searchInput" type="text" placeholder="Rechercher une tâche… ( / )">
+      </div>
+      <select class="btn" id="priorityFilter" title="Filtrer par priorité">
+        <option value="">Toutes priorités</option>
+        <option value="high">Haute</option>
+        <option value="medium">Moyenne</option>
+        <option value="low">Basse</option>
+      </select>
+      <select class="btn" id="dueFilter" title="Filtrer par échéance">
+        <option value="">Toutes échéances</option>
+        <option value="overdue">En retard</option>
+        <option value="today">Aujourd'hui</option>
+        <option value="week">7 prochains jours</option>
+        <option value="none">Sans échéance</option>
+      </select>
+      <select class="btn" id="sortSelect" title="Trier les cartes">
+        <option value="manual">Tri manuel</option>
+        <option value="priority">Tri : priorité</option>
+        <option value="due">Tri : échéance</option>
+      </select>
+      <button class="btn" id="resetFilters" hidden>Effacer filtres</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="board" id="board"></div>
+  </main>
+</div>
+
+<div id="layer"></div>
+
+<script>
+(() => {
+  // ================= Données =================
+  const STORAGE_KEY = 'kanban-projets-v1';
+  const COLUMNS = [
+    { id: 'todo', label: 'À faire', color: '#5b4cf0' },
+    { id: 'progress', label: 'En cours', color: '#f5a524' },
+    { id: 'done', label: 'Terminé', color: '#30a46c' },
+  ];
+  const PRIORITIES = { high: 'Haute', medium: 'Moyenne', low: 'Basse' };
+  const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+  const PALETTE = ['#5b4cf0', '#e5484d', '#f5a524', '#30a46c', '#0091ff', '#d6409f', '#12a594', '#8e4ec6', '#f76b15', '#64748b'];
+
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+  function demoData() {
+    const p1 = uid(), p2 = uid(), p3 = uid();
+    const t = (projectId, title, status, priority, extra = {}) => ({
+      id: uid(), projectId, title, status, priority, description: '', dueDate: '', tags: [], checklist: [],
+      createdAt: Date.now(), updatedAt: Date.now(), ...extra,
+    });
+    return {
+      projects: [
+        { id: p1, name: 'Refonte site web', color: '#5b4cf0', description: 'Nouvelle version du site vitrine' },
+        { id: p2, name: 'Application mobile', color: '#e5484d', description: 'MVP de l\'app iOS / Android' },
+        { id: p3, name: 'Campagne marketing', color: '#30a46c', description: 'Lancement du T4' },
+      ],
+      tasks: [
+        t(p1, 'Brainstorming', 'todo', 'low', { description: 'Réunir l\'équipe pour faire émerger des idées variées.', tags: ['atelier'] }),
+        t(p1, 'Recherche utilisateurs', 'todo', 'high', { description: 'Interviews pour comprendre les besoins des utilisateurs.', dueDate: addDays(2),
+          checklist: [{ id: uid(), text: 'Préparer le guide d\'entretien', done: true }, { id: uid(), text: 'Recruter 5 participants', done: false }, { id: uid(), text: 'Synthèse', done: false }] }),
+        t(p2, 'Wireframes', 'todo', 'high', { description: 'Wireframes basse fidélité des écrans principaux.', dueDate: addDays(-1), tags: ['design'] }),
+        t(p2, 'Illustrations onboarding', 'progress', 'low', { dueDate: addDays(5), tags: ['design'] }),
+        t(p3, 'Moodboard', 'progress', 'medium', { description: 'Pistes visuelles pour la campagne.', tags: ['créa'] }),
+        t(p2, 'Maquettes app mobile', 'done', 'medium', { tags: ['design'] }),
+        t(p1, 'Design system', 'done', 'medium', { description: 'Adapter l\'UI à partir des composants existants.' }),
+      ],
+    };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.projects) && Array.isArray(data.tasks)) return data;
+      }
+    } catch (e) { /* stockage indisponible : on repart des données de démo */ }
+    return demoData();
+  }
+
+  let state = load();
+  const ui = {
+    projectFilter: new Set(), search: '', priority: '', due: '', sort: 'manual',
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY + '-ui') || '{}');
+    if (saved.projectFilter) ui.projectFilter = new Set(saved.projectFilter.filter(id => state.projects.some(p => p.id === id)));
+    if (saved.sort) ui.sort = saved.sort;
+    if (saved.theme) document.documentElement.dataset.theme = saved.theme;
+  } catch (e) {}
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY + '-ui', JSON.stringify({
+        projectFilter: [...ui.projectFilter], sort: ui.sort, theme: document.documentElement.dataset.theme || 'light',
+      }));
+    } catch (e) {}
+  }
+
+  // ================= Utilitaires =================
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const projectById = (id) => state.projects.find(p => p.id === id);
+  const ICONS = {
+    dots: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>',
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16l-6 8v6l-4-2v-4L4 5Z"/></svg>',
+  };
+
+  function dueInfo(task) {
+    if (!task.dueDate) return null;
+    const today = todayISO();
+    const diff = Math.round((new Date(task.dueDate) - new Date(today)) / 86400000);
+    const label = new Date(task.dueDate + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    if (task.status === 'done') return { cls: '', label };
+    if (diff < 0) return { cls: 'overdue', label: `${label} · en retard` };
+    if (diff === 0) return { cls: 'soon', label: 'Aujourd\'hui' };
+    if (diff <= 2) return { cls: 'soon', label };
+    return { cls: '', label };
+  }
+
+  function matchesFilters(task) {
+    if (ui.projectFilter.size && !ui.projectFilter.has(task.projectId)) return false;
+    if (ui.priority && task.priority !== ui.priority) return false;
+    if (ui.search) {
+      const q = ui.search.toLowerCase();
+      const hay = [task.title, task.description, ...(task.tags || []), projectById(task.projectId)?.name].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (ui.due) {
+      const t = todayISO();
+      if (ui.due === 'none') return !task.dueDate;
+      if (!task.dueDate) return false;
+      if (ui.due === 'overdue') return task.dueDate < t && task.status !== 'done';
+      if (ui.due === 'today') return task.dueDate === t;
+      if (ui.due === 'week') return task.dueDate >= t && task.dueDate <= addDays(7);
+    }
+    return true;
+  }
+
+  function sortTasks(list) {
+    if (ui.sort === 'priority') return list.sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || (a.order ?? 0) - (b.order ?? 0));
+    if (ui.sort === 'due') return list.sort((a, b) => (a.dueDate || '9999') .localeCompare(b.dueDate || '9999') || (a.order ?? 0) - (b.order ?? 0));
+    return list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  // ================= Rendu =================
+  function render() {
+    renderSidebar();
+    renderTopbar();
+    renderStats();
+    renderBoard();
+    save();
+  }
+
+  function renderSidebar() {
+    const list = $('#projectList');
+    const total = state.tasks.length;
+    let html = `<div class="project-item all-item ${ui.projectFilter.size === 0 ? 'active' : ''}" data-all>
+      <span class="dot" style="background: conic-gradient(${state.projects.map((p, i, a) => `${p.color} ${i / a.length * 100}% ${(i + 1) / a.length * 100}%`).join(',') || 'var(--muted) 0 100%'})"></span>
+      <span class="name">Tous les projets</span><span class="count">${total}</span></div>`;
+    for (const p of state.projects) {
+      const tasks = state.tasks.filter(t => t.projectId === p.id);
+      const done = tasks.filter(t => t.status === 'done').length;
+      const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+      html += `<div class="project-item ${ui.projectFilter.has(p.id) ? 'active' : ''}" data-project="${p.id}" title="${esc(p.description || p.name)} — Ctrl/⌘+clic pour sélection multiple">
+        <span class="dot" style="background:${p.color}"></span>
+        <span class="name">${esc(p.name)}</span>
+        <span class="count">${done}/${tasks.length}</span>
+        <button class="icon-btn edit-btn" data-project-menu="${p.id}" title="Options du projet">${ICONS.dots}</button>
+        <div class="progress" title="${pct}% terminé"><span style="width:${pct}%;background:${p.color}"></span></div>
+      </div>`;
+    }
+    if (!state.projects.length) html += `<div class="empty" style="margin-top:8px">Aucun projet.<br><button class="btn small primary" style="margin-top:8px" data-new-project>Créer un projet</button></div>`;
+    list.innerHTML = html;
+  }
+
+  function renderTopbar() {
+    const title = $('#boardTitle');
+    if (ui.projectFilter.size === 1) {
+      const p = projectById([...ui.projectFilter][0]);
+      title.innerHTML = `<span class="dot" style="background:${p.color}"></span>${esc(p.name)}`;
+    } else if (ui.projectFilter.size > 1) {
+      title.textContent = `${ui.projectFilter.size} projets sélectionnés`;
+    } else title.textContent = 'Tous les projets';
+    $('#priorityFilter').value = ui.priority;
+    $('#dueFilter').value = ui.due;
+    $('#sortSelect').value = ui.sort;
+    $('#resetFilters').hidden = !(ui.projectFilter.size || ui.priority || ui.due || ui.search);
+  }
+
+  function renderStats() {
+    const scope = state.tasks.filter(t => !ui.projectFilter.size || ui.projectFilter.has(t.projectId));
+    const done = scope.filter(t => t.status === 'done').length;
+    const overdue = scope.filter(t => t.dueDate && t.dueDate < todayISO() && t.status !== 'done').length;
+    const high = scope.filter(t => t.priority === 'high' && t.status !== 'done').length;
+    const pct = scope.length ? Math.round(done / scope.length * 100) : 0;
+    $('#stats').innerHTML = `
+      <div class="stat"><div class="v">${scope.length}</div><div class="l">Tâches</div></div>
+      <div class="stat"><div class="v">${pct}%</div><div class="l">Avancement (${done} terminées)</div></div>
+      <div class="stat ${high ? 'danger' : ''}"><div class="v">${high}</div><div class="l">Priorité haute en cours</div></div>
+      <div class="stat ${overdue ? 'danger' : ''}" ${overdue ? 'style="cursor:pointer" data-show-overdue title="Afficher les tâches en retard"' : ''}><div class="v">${overdue}</div><div class="l">En retard</div></div>`;
+  }
+
+  function cardHTML(task) {
+    const p = projectById(task.projectId) || { name: '—', color: '#64748b' };
+    const due = dueInfo(task);
+    const cl = task.checklist || [];
+    const clDone = cl.filter(c => c.done).length;
+    const prioPill = task.status === 'done'
+      ? `<span class="pill done">Terminé</span>`
+      : `<span class="pill ${task.priority}">${PRIORITIES[task.priority]}</span>`;
+    return `<article class="card ${task.status === 'done' ? 'is-done' : ''}" draggable="true" data-task="${task.id}" style="--pc:${p.color}">
+      <div class="card-top">
+        ${prioPill}
+        <span class="pill proj-pill">${esc(p.name)}</span>
+        <button class="icon-btn" data-task-menu="${task.id}" title="Actions">${ICONS.dots}</button>
+      </div>
+      <h3>${esc(task.title)}</h3>
+      ${task.description ? `<p>${esc(task.description)}</p>` : ''}
+      ${task.tags?.length ? `<div class="tags">${task.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
+      ${(due || cl.length) ? `<div class="card-foot">
+        ${due ? `<span class="meta ${due.cls}">${ICONS.cal}${esc(due.label)}</span>` : ''}
+        ${cl.length ? `<span class="meta">${ICONS.check}${clDone}/${cl.length}</span><span class="mini-progress"><span style="width:${clDone / cl.length * 100}%"></span></span>` : ''}
+      </div>` : ''}
+    </article>`;
+  }
+
+  function renderBoard() {
+    const board = $('#board');
+    board.innerHTML = COLUMNS.map(col => {
+      const tasks = sortTasks(state.tasks.filter(t => t.status === col.id && matchesFilters(t)));
+      return `<section class="column" data-col="${col.id}">
+        <div class="col-head">
+          <div class="col-title"><span class="bullet" style="background:${col.color}"></span>${col.label}<span class="badge">${tasks.length}</span>
+            <button class="icon-btn" data-add-in="${col.id}" title="Ajouter une tâche dans « ${col.label} »">${ICONS.plus}</button></div>
+          <div class="col-line" style="background:${col.color}"></div>
+        </div>
+        <div class="cards" data-drop="${col.id}">
+          ${tasks.map(cardHTML).join('') || `<div class="empty">${state.projects.length ? 'Aucune tâche' : 'Créez d\'abord un projet'}</div>`}
+        </div>
+      </section>`;
+    }).join('');
+  }
+
+  // ================= Actions =================
+  function normalizeOrder(status) {
+    state.tasks.filter(t => t.status === status).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).forEach((t, i) => t.order = i);
+  }
+
+  function upsertTask(data) {
+    if (data.id) {
+      const t = state.tasks.find(x => x.id === data.id);
+      if (t.status !== data.status) data.order = Math.max(-1, ...state.tasks.filter(x => x.status === data.status).map(x => x.order ?? 0)) + 1;
+      Object.assign(t, data, { updatedAt: Date.now() });
+    } else {
+      const order = Math.max(-1, ...state.tasks.filter(x => x.status === data.status).map(x => x.order ?? 0)) + 1;
+      state.tasks.push({ ...data, id: uid(), order, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    render();
+  }
+
+  function moveTask(id, status, beforeId = null) {
+    const task = state.tasks.find(t => t.id === id);
+    if (!task) return;
+    task.status = status;
+    task.updatedAt = Date.now();
+    const col = state.tasks.filter(t => t.status === status && t.id !== id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const idx = beforeId ? col.findIndex(t => t.id === beforeId) : -1;
+    col.splice(idx === -1 ? col.length : idx, 0, task);
+    col.forEach((t, i) => t.order = i);
+    render();
+  }
+
+  let lastDeleted = null;
+  function deleteTask(id) {
+    const i = state.tasks.findIndex(t => t.id === id);
+    const [task] = state.tasks.splice(i, 1);
+    lastDeleted = { tasks: [task] };
+    render();
+    toast(`Tâche « ${task.title} » supprimée`, true);
+  }
+
+  function deleteProject(id) {
+    const p = projectById(id);
+    const tasks = state.tasks.filter(t => t.projectId === id);
+    confirmDialog(`Supprimer le projet « ${p.name} » ?`,
+      tasks.length ? `Ses ${tasks.length} tâche(s) seront également supprimées.` : 'Ce projet ne contient aucune tâche.',
+      () => {
+        state.projects = state.projects.filter(x => x.id !== id);
+        state.tasks = state.tasks.filter(t => t.projectId !== id);
+        ui.projectFilter.delete(id);
+        lastDeleted = { project: p, tasks };
+        render();
+        toast(`Projet « ${p.name} » supprimé`, true);
+      });
+  }
+
+  function undo() {
+    if (!lastDeleted) return;
+    if (lastDeleted.project) state.projects.push(lastDeleted.project);
+    state.tasks.push(...lastDeleted.tasks);
+    lastDeleted = null;
+    closeToast();
+    render();
+  }
+
+  function duplicateTask(id) {
+    const t = state.tasks.find(x => x.id === id);
+    const copy = JSON.parse(JSON.stringify(t));
+    copy.id = uid(); copy.title = t.title + ' (copie)'; copy.order = (t.order ?? 0) + 0.5;
+    copy.checklist = (copy.checklist || []).map(c => ({ ...c, id: uid() }));
+    copy.createdAt = copy.updatedAt = Date.now();
+    state.tasks.push(copy);
+    normalizeOrder(t.status);
+    render();
+  }
+
+  // ================= Modales =================
+  const layer = $('#layer');
+  function openModal(html, onMount) {
+    layer.innerHTML = `<div class="overlay" data-overlay><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+    const modal = $('.modal', layer);
+    onMount?.(modal);
+    setTimeout(() => $('[autofocus]', modal)?.focus(), 30);
+  }
+  function closeModal() { layer.innerHTML = ''; }
+  layer.addEventListener('mousedown', e => { if (e.target.matches('[data-overlay]')) closeModal(); });
+
+  function projectModal(id = null) {
+    const p = id ? projectById(id) : { name: '', color: PALETTE[state.projects.length % PALETTE.length], description: '' };
+    let color = p.color;
+    openModal(`
+      <header><h2>${id ? 'Modifier le projet' : 'Nouveau projet'}</h2><button class="icon-btn" data-close>${ICONS.x}</button></header>
+      <form class="body" id="projectForm">
+        <div class="field"><label for="pName">Nom du projet *</label><input type="text" id="pName" required maxlength="60" value="${esc(p.name)}" autofocus></div>
+        <div class="field"><label>Couleur</label>
+          <div class="swatches" id="swatches">
+            ${PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}" title="${c}"></button>`).join('')}
+            <input type="color" class="swatch-custom" id="customColor" value="${p.color}" title="Couleur personnalisée">
+          </div>
+        </div>
+        <div class="field"><label for="pDesc">Description</label><textarea id="pDesc" rows="3" placeholder="Objectif, contexte…">${esc(p.description)}</textarea></div>
+      </form>
+      <footer>
+        ${id ? `<button class="btn danger" data-delete-project="${id}">${ICONS.trash}Supprimer</button>` : ''}
+        <div class="spacer"></div>
+        <button class="btn" data-close>Annuler</button>
+        <button class="btn primary" type="submit" form="projectForm">${id ? 'Enregistrer' : 'Créer le projet'}</button>
+      </footer>`, modal => {
+      const paint = () => modal.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.color.toLowerCase() === color.toLowerCase()));
+      paint();
+      $('#swatches', modal).addEventListener('click', e => { const s = e.target.closest('.swatch'); if (s) { color = s.dataset.color; $('#customColor', modal).value = color; paint(); } });
+      $('#customColor', modal).addEventListener('input', e => { color = e.target.value; paint(); });
+      $('#projectForm', modal).addEventListener('submit', e => {
+        e.preventDefault();
+        const name = $('#pName', modal).value.trim();
+        if (!name) return;
+        const data = { name, color, description: $('#pDesc', modal).value.trim() };
+        if (id) Object.assign(projectById(id), data);
+        else { const np = { id: uid(), ...data }; state.projects.push(np); }
+        closeModal(); render();
+      });
+    });
+  }
+
+  function taskModal(id = null, defaults = {}) {
+    if (!state.projects.length) { toast('Créez d\'abord un projet'); projectModal(); return; }
+    const existing = id ? state.tasks.find(t => t.id === id) : null;
+    const defaultProject = defaults.projectId || (ui.projectFilter.size === 1 ? [...ui.projectFilter][0] : state.projects[0].id);
+    const t = existing ? JSON.parse(JSON.stringify(existing)) : {
+      title: '', description: '', projectId: defaultProject, status: defaults.status || 'todo', priority: 'medium', dueDate: '', tags: [], checklist: [],
+    };
+    let checklist = t.checklist || [];
+    const statusSeg = COLUMNS.map(c => `<button type="button" data-status="${c.id}" class="${t.status === c.id ? 'on' : ''}">${c.label}</button>`).join('');
+    const prioSeg = Object.entries(PRIORITIES).reverse().map(([k, v]) => `<button type="button" data-prio="${k}" class="${t.priority === k ? 'on' : ''}">${v}</button>`).join('');
+    openModal(`
+      <header><h2>${id ? 'Modifier la tâche' : 'Nouvelle tâche'}</h2><button class="icon-btn" data-close>${ICONS.x}</button></header>
+      <form class="body" id="taskForm">
+        <div class="field"><label for="tTitle">Titre *</label><input type="text" id="tTitle" required maxlength="120" value="${esc(t.title)}" autofocus></div>
+        <div class="row">
+          <div class="field"><label for="tProject">Projet</label>
+            <select id="tProject">${state.projects.map(p => `<option value="${p.id}" ${p.id === t.projectId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>
+          <div class="field"><label for="tDue">Échéance</label><input type="date" id="tDue" value="${t.dueDate || ''}"></div>
+        </div>
+        <div class="field"><label>Statut</label><div class="seg" id="statusSeg">${statusSeg}</div></div>
+        <div class="field"><label>Priorité</label><div class="seg" id="prioSeg">${prioSeg}</div></div>
+        <div class="field"><label for="tDesc">Description</label><textarea id="tDesc" rows="3" placeholder="Détails, liens, notes…">${esc(t.description)}</textarea></div>
+        <div class="field"><label for="tTags">Étiquettes</label><input type="text" id="tTags" placeholder="design, urgent, client… (séparées par des virgules)" value="${esc((t.tags || []).join(', '))}"></div>
+        <div class="field"><label>Sous-tâches</label>
+          <div class="checklist" id="checklist"></div>
+          <div class="check-item"><input type="text" id="newCheck" placeholder="Ajouter une sous-tâche puis Entrée"><button type="button" class="btn small" id="addCheck">Ajouter</button></div>
+        </div>
+        ${existing ? `<div class="hint">Créée le ${new Date(existing.createdAt).toLocaleDateString('fr-FR')} · modifiée le ${new Date(existing.updatedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
+      </form>
+      <footer>
+        ${id ? `<button class="btn danger" data-delete-task="${id}">${ICONS.trash}Supprimer</button>` : ''}
+        <div class="spacer"></div>
+        <button class="btn" data-close>Annuler</button>
+        <button class="btn primary" type="submit" form="taskForm">${id ? 'Enregistrer' : 'Créer la tâche'}</button>
+      </footer>`, modal => {
+      let status = t.status, priority = t.priority;
+      const segHandler = (sel, attr, set) => $(sel, modal).addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        set(b.dataset[attr]);
+        $(sel, modal).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      });
+      segHandler('#statusSeg', 'status', v => status = v);
+      segHandler('#prioSeg', 'prio', v => priority = v);
+
+      const drawChecklist = () => {
+        $('#checklist', modal).innerHTML = checklist.map(c => `<div class="check-item ${c.done ? 'done' : ''}" data-cid="${c.id}">
+          <input type="checkbox" ${c.done ? 'checked' : ''}><input type="text" value="${esc(c.text)}"><button type="button" class="icon-btn" data-remove title="Retirer">${ICONS.x}</button></div>`).join('');
+      };
+      drawChecklist();
+      const addCheck = () => {
+        const input = $('#newCheck', modal); const text = input.value.trim();
+        if (!text) return;
+        checklist.push({ id: uid(), text, done: false }); input.value = ''; drawChecklist(); input.focus();
+      };
+      $('#addCheck', modal).addEventListener('click', addCheck);
+      $('#newCheck', modal).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCheck(); } });
+      $('#checklist', modal).addEventListener('input', e => {
+        const row = e.target.closest('[data-cid]'); const item = checklist.find(c => c.id === row.dataset.cid);
+        if (e.target.type === 'checkbox') { item.done = e.target.checked; row.classList.toggle('done', item.done); }
+        else item.text = e.target.value;
+      });
+      $('#checklist', modal).addEventListener('click', e => {
+        if (!e.target.closest('[data-remove]')) return;
+        const row = e.target.closest('[data-cid]'); checklist = checklist.filter(c => c.id !== row.dataset.cid); drawChecklist();
+      });
+
+      $('#taskForm', modal).addEventListener('submit', e => {
+        e.preventDefault();
+        const title = $('#tTitle', modal).value.trim();
+        if (!title) return;
+        upsertTask({
+          ...(id ? { id } : {}),
+          title, status, priority,
+          projectId: $('#tProject', modal).value,
+          dueDate: $('#tDue', modal).value,
+          description: $('#tDesc', modal).value.trim(),
+          tags: $('#tTags', modal).value.split(',').map(s => s.trim().replace(/^#/, '')).filter(Boolean),
+          checklist: checklist.filter(c => c.text.trim()),
+        });
+        closeModal();
+      });
+    });
+  }
+
+  function confirmDialog(title, text, onOk) {
+    openModal(`
+      <header><h2>${esc(title)}</h2></header>
+      <div class="body"><p style="margin:0;color:var(--muted)">${esc(text)}</p></div>
+      <footer><div class="spacer"></div><button class="btn" data-close autofocus>Annuler</button><button class="btn primary" id="okBtn" style="background:var(--danger);border-color:var(--danger)">Supprimer</button></footer>`,
+      modal => $('#okBtn', modal).addEventListener('click', () => { closeModal(); onOk(); }));
+  }
+
+  // ================= Menus contextuels =================
+  let menuEl = null;
+  function closeMenu() { menuEl?.remove(); menuEl = null; }
+  function openMenu(anchor, html, handlers) {
+    closeMenu();
+    menuEl = document.createElement('div');
+    menuEl.className = 'menu';
+    menuEl.innerHTML = html;
+    document.body.appendChild(menuEl);
+    const r = anchor.getBoundingClientRect();
+    const mw = menuEl.offsetWidth, mh = menuEl.offsetHeight;
+    menuEl.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + 'px';
+    menuEl.style.top = (r.bottom + 4 + mh > innerHeight ? Math.max(8, r.top - mh - 4) : r.bottom + 4) + 'px';
+    menuEl.addEventListener('click', e => {
+      const b = e.target.closest('[data-act]'); if (!b) return;
+      closeMenu(); handlers[b.dataset.act]?.(b.dataset.arg);
+    });
+  }
+
+  function taskMenu(anchor, id) {
+    const t = state.tasks.find(x => x.id === id);
+    const moves = COLUMNS.filter(c => c.id !== t.status).map(c => `<button data-act="move" data-arg="${c.id}">${ICONS.arrow}${c.label}</button>`).join('');
+    openMenu(anchor, `
+      <button data-act="edit">${ICONS.edit}Modifier</button>
+      <button data-act="dup">${ICONS.copy}Dupliquer</button>
+      <button data-act="focus">${ICONS.filter}Filtrer sur ce projet</button>
+      <hr><div class="menu-label">Déplacer vers</div>${moves}
+      <hr><button data-act="del" class="danger">${ICONS.trash}Supprimer</button>`, {
+      edit: () => taskModal(id), dup: () => duplicateTask(id), del: () => deleteTask(id),
+      move: (s) => moveTask(id, s),
+      focus: () => { ui.projectFilter = new Set([t.projectId]); render(); },
+    });
+  }
+
+  function projectMenu(anchor, id) {
+    openMenu(anchor, `
+      <button data-act="edit">${ICONS.edit}Modifier</button>
+      <button data-act="add">${ICONS.plus}Ajouter une tâche</button>
+      <hr><button data-act="del" class="danger">${ICONS.trash}Supprimer</button>`, {
+      edit: () => projectModal(id), add: () => taskModal(null, { projectId: id }), del: () => deleteProject(id),
+    });
+  }
+
+  // ================= Toast =================
+  let toastTimer;
+  function closeToast() { $('.toast')?.remove(); clearTimeout(toastTimer); }
+  function toast(msg, withUndo = false) {
+    closeToast();
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<span>${esc(msg)}</span>${withUndo ? '<button data-undo>Annuler</button>' : ''}`;
+    document.body.appendChild(el);
+    el.querySelector('[data-undo]')?.addEventListener('click', undo);
+    toastTimer = setTimeout(closeToast, 6000);
+  }
+
+  // ================= Événements =================
+  document.addEventListener('click', e => {
+    const el = e.target;
+    if (menuEl && !menuEl.contains(el) && !el.closest('[data-task-menu],[data-project-menu]')) closeMenu();
+    if (el.closest('[data-close]')) return closeModal();
+
+    const tm = el.closest('[data-task-menu]');
+    if (tm) { e.stopPropagation(); return menuEl ? closeMenu() : taskMenu(tm, tm.dataset.taskMenu); }
+    const pm = el.closest('[data-project-menu]');
+    if (pm) { e.stopPropagation(); return menuEl ? closeMenu() : projectMenu(pm, pm.dataset.projectMenu); }
+
+    const delT = el.closest('[data-delete-task]');
+    if (delT) { closeModal(); return deleteTask(delT.dataset.deleteTask); }
+    const delP = el.closest('[data-delete-project]');
+    if (delP) { return deleteProject(delP.dataset.deleteProject); }
+
+    const addIn = el.closest('[data-add-in]');
+    if (addIn) return taskModal(null, { status: addIn.dataset.addIn });
+
+    if (el.closest('[data-new-project]')) return projectModal();
+    if (el.closest('[data-show-overdue]')) { ui.due = 'overdue'; return render(); }
+
+    const card = el.closest('.card');
+    if (card && !el.closest('button')) return taskModal(card.dataset.task);
+
+    if (el.closest('[data-all]')) { ui.projectFilter.clear(); $('#sidebar').classList.remove('open'); return render(); }
+    const pItem = el.closest('[data-project]');
+    if (pItem) {
+      const pid = pItem.dataset.project;
+      if (e.ctrlKey || e.metaKey) ui.projectFilter.has(pid) ? ui.projectFilter.delete(pid) : ui.projectFilter.add(pid);
+      else ui.projectFilter = (ui.projectFilter.size === 1 && ui.projectFilter.has(pid)) ? new Set() : new Set([pid]);
+      $('#sidebar').classList.remove('open');
+      return render();
+    }
+  });
+  $('#projectList').addEventListener('dblclick', e => { const p = e.target.closest('[data-project]'); if (p) projectModal(p.dataset.project); });
+
+  $('#addProjectBtn').addEventListener('click', () => projectModal());
+  $('#addTaskBtn').addEventListener('click', () => taskModal());
+  $('#searchInput').addEventListener('input', e => { ui.search = e.target.value.trim(); renderBoard(); renderTopbar(); });
+  $('#priorityFilter').addEventListener('change', e => { ui.priority = e.target.value; render(); });
+  $('#dueFilter').addEventListener('change', e => { ui.due = e.target.value; render(); });
+  $('#sortSelect').addEventListener('change', e => { ui.sort = e.target.value; render(); });
+  $('#resetFilters').addEventListener('click', () => {
+    ui.projectFilter.clear(); ui.priority = ''; ui.due = ''; ui.search = ''; $('#searchInput').value = ''; render();
+  });
+  $('#menuToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+  $('#themeBtn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    save();
+  });
+
+  $('#exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `kanban-projets-${todayISO()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $('#importBtn').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!Array.isArray(data.projects) || !Array.isArray(data.tasks)) throw new Error();
+      state = data; ui.projectFilter.clear(); render(); toast('Sauvegarde importée');
+    } catch { toast('Fichier invalide'); }
+    e.target.value = '';
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if (menuEl) closeMenu(); else if (layer.innerHTML) closeModal(); return; }
+    if (layer.innerHTML || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); taskModal(); }
+    if (e.key === 'p' || e.key === 'P') { e.preventDefault(); projectModal(); }
+    if (e.key === '/') { e.preventDefault(); $('#searchInput').focus(); }
+  });
+
+  // ================= Glisser-déposer =================
+  let dragId = null;
+  const board = $('#board');
+  const clearMarkers = () => board.querySelectorAll('.placeholder-before,.placeholder-after,.drag-over').forEach(x => x.classList.remove('placeholder-before', 'placeholder-after', 'drag-over'));
+  function dropTarget(zone, y) {
+    const cards = [...zone.querySelectorAll('.card:not(.dragging)')];
+    for (const c of cards) { const r = c.getBoundingClientRect(); if (y < r.top + r.height / 2) return { card: c, before: true }; }
+    return cards.length ? { card: cards[cards.length - 1], before: false } : null;
+  }
+  board.addEventListener('dragstart', e => {
+    const card = e.target.closest('.card'); if (!card) return;
+    dragId = card.dataset.task; card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId);
+  });
+  board.addEventListener('dragend', () => { dragId = null; board.querySelectorAll('.dragging').forEach(c => c.classList.remove('dragging')); clearMarkers(); });
+  board.addEventListener('dragover', e => {
+    const zone = e.target.closest('.column')?.querySelector('.cards'); if (!zone || !dragId) return;
+    e.preventDefault();
+    clearMarkers(); zone.classList.add('drag-over');
+    if (ui.sort !== 'manual') return;
+    const t = dropTarget(zone, e.clientY);
+    if (t) t.card.classList.add(t.before ? 'placeholder-before' : 'placeholder-after');
+  });
+  board.addEventListener('dragleave', e => { if (!board.contains(e.relatedTarget)) clearMarkers(); });
+  board.addEventListener('drop', e => {
+    const zone = e.target.closest('.column')?.querySelector('.cards'); if (!zone || !dragId) return;
+    e.preventDefault();
+    const status = zone.dataset.drop;
+    let beforeId = null;
+    if (ui.sort === 'manual') {
+      const t = dropTarget(zone, e.clientY);
+      if (t) beforeId = t.before ? t.card.dataset.task : (t.card.nextElementSibling?.dataset.task || null);
+    }
+    const id = dragId; clearMarkers(); moveTask(id, status, beforeId);
+  });
+
+  // Initialisation de l'ordre pour les données de démo
+  COLUMNS.forEach(c => { if (state.tasks.some(t => t.status === c.id && t.order == null)) normalizeOrder(c.id); });
+  render();
+})();
+</script>
+</body>
+</html>
