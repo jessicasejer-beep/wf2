@@ -24,9 +24,23 @@
     --ok-soft: #e7f6ee;
     --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
     --shadow-lg: 0 12px 32px rgba(16,24,40,.18);
+    --low-text: #c27c0e;
     --radius: 12px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141a; --surface: #1c1f27; --column: #171a21; --text: #e8eaf0; --muted: #9aa1b2; --border: #2a2f3a;
+      --accent: #8b80ff; --accent-soft: #2a2752; --danger: #ff6b6f; --danger-soft: #3a1f22; --warn: #ffb547;
+      --warn-soft: #3a2d17; --ok: #4cc38a; --ok-soft: #173326;
+      --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+      --low-text: var(--warn);
+      color-scheme: dark;
+    }
   }
   :root[data-theme="dark"] {
+    color-scheme: dark;
+    --low-text: var(--warn);
     --bg: #12141a;
     --surface: #1c1f27;
     --column: #171a21;
@@ -54,7 +68,11 @@
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
 
-  .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+  .app { display: grid; grid-template-columns: 260px 1fr; height: 100%; }
+  .sync { color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+  .sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sync-dot, var(--muted)); }
+  .sync.ok { --sync-dot: var(--ok); }
+  .sync.err { --sync-dot: var(--danger); color: var(--danger); }
 
   /* ---------- Sidebar ---------- */
   .sidebar {
@@ -144,11 +162,10 @@
   .card-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .card-top .icon-btn { margin-left: auto; }
   .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
-  .pill.low { background: var(--warn-soft); color: #c27c0e; }
+  .pill.low { background: var(--warn-soft); color: var(--low-text); }
   .pill.medium { background: var(--accent-soft); color: var(--accent); }
   .pill.high { background: var(--danger-soft); color: var(--danger); }
   .pill.done { background: var(--ok-soft); color: var(--ok); }
-  :root[data-theme="dark"] .pill.low { color: var(--warn); }
   .proj-pill { background: color-mix(in srgb, var(--pc) 14%, transparent); color: var(--pc); }
   .card h3 { margin: 10px 0 4px; font-size: 15px; line-height: 1.3; }
   .card.is-done h3 { text-decoration: line-through; color: var(--muted); }
@@ -158,7 +175,7 @@
   .card-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
   .card-foot .meta { display: inline-flex; align-items: center; gap: 4px; }
   .card-foot .meta.overdue { color: var(--danger); font-weight: 600; }
-  .card-foot .meta.soon { color: #c27c0e; font-weight: 600; }
+  .card-foot .meta.soon { color: var(--low-text); font-weight: 600; }
   .mini-progress { flex: 1; min-width: 50px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
   .mini-progress span { display: block; height: 100%; background: var(--ok); }
 
@@ -202,8 +219,7 @@
   .hint { color: var(--muted); font-size: 12px; }
 
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow-lg); z-index: 60; display: flex; gap: 12px; align-items: center; }
-  .toast button { background: transparent; border: 0; color: var(--accent); font-weight: 700; }
-  :root:not([data-theme="dark"]) .toast button { color: #b3abff; }
+  .toast button { background: transparent; border: 0; color: inherit; font-weight: 700; text-decoration: underline; }
 
   .menu-toggle { display: none; }
 
@@ -237,7 +253,7 @@
     <div class="side-footer">
       <button class="btn small" id="exportBtn" title="Télécharger une sauvegarde JSON"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Exporter</button>
       <button class="btn small" id="importBtn" title="Restaurer depuis une sauvegarde JSON"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0-4 4m4-4 4 4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>Importer</button>
-      <button class="btn small" id="themeBtn" title="Thème clair / sombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+      <span class="sync" id="syncStatus">Chargement…</span>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
   </aside>
@@ -323,35 +339,101 @@
     };
   }
 
-  function load() {
+  // ================= Stockage =================
+  // Dans claude.ai : base de données de l'artifact (synchronisée entre appareils).
+  // En fichier local : localStorage du navigateur.
+  let mode = 'loading'; // 'db' | 'local'
+  let db = null;
+  let state = { projects: [], tasks: [] };
+  const COLLS = ['projects', 'tasks'];
+  const synced = { projects: new Map(), tasks: new Map() };
+  const writeChains = new Map();
+
+  function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
         if (Array.isArray(data.projects) && Array.isArray(data.tasks)) return data;
       }
-    } catch (e) { /* stockage indisponible : on repart des données de démo */ }
+    } catch (e) { /* stockage indisponible : données d'exemple */ }
     return demoData();
   }
 
-  let state = load();
   const ui = {
     projectFilter: new Set(), search: '', priority: '', due: '', sort: 'manual',
   };
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY + '-ui') || '{}');
-    if (saved.projectFilter) ui.projectFilter = new Set(saved.projectFilter.filter(id => state.projects.some(p => p.id === id)));
+    if (saved.projectFilter) ui.projectFilter = new Set(saved.projectFilter);
     if (saved.sort) ui.sort = saved.sort;
-    if (saved.theme) document.documentElement.dataset.theme = saved.theme;
   } catch (e) {}
 
+  const bodyOf = ({ id, ...rest }) => rest;
+
+  function setSync(kind, text) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    el.className = 'sync ' + (kind === 'err' ? 'err' : kind === 'loading' ? '' : 'ok');
+    el.textContent = text || { db: 'Enregistré en ligne', local: 'Enregistré dans ce navigateur', loading: 'Chargement…' }[kind];
+  }
+
+  function enqueue(key, fn) {
+    const next = (writeChains.get(key) || Promise.resolve()).then(fn).then(
+      () => setSync('db'),
+      err => {
+        setSync('err', 'Échec de l\'enregistrement');
+        toast(err?.code === 'quota_exceeded' ? 'Espace de stockage plein : supprimez des tâches terminées.' : 'Modification non enregistrée. Rechargez la page puis réessayez.');
+      });
+    writeChains.set(key, next);
+  }
+
+  // Écrit uniquement les documents qui ont changé depuis la dernière synchronisation.
+  function syncDb() {
+    for (const coll of COLLS) {
+      const known = synced[coll];
+      const current = new Map(state[coll].map(x => [x.id, JSON.stringify(bodyOf(x))]));
+      for (const [id, json] of current) {
+        if (known.get(id) === json) continue;
+        known.set(id, json);
+        const body = JSON.parse(json);
+        enqueue(coll + '/' + id, () => db.collection(coll).doc(id).set(body));
+      }
+      for (const id of [...known.keys()]) {
+        if (current.has(id)) continue;
+        known.delete(id);
+        enqueue(coll + '/' + id, () => db.collection(coll).doc(id).delete());
+      }
+    }
+  }
+
   function save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      localStorage.setItem(STORAGE_KEY + '-ui', JSON.stringify({
-        projectFilter: [...ui.projectFilter], sort: ui.sort, theme: document.documentElement.dataset.theme || 'light',
-      }));
-    } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY + '-ui', JSON.stringify({ projectFilter: [...ui.projectFilter], sort: ui.sort })); } catch (e) {}
+    if (mode === 'db') syncDb();
+    else if (mode === 'local') { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+  }
+
+  function startLocal() {
+    if (mode !== 'loading') return;
+    mode = 'local';
+    state = loadLocal();
+    COLUMNS.forEach(c => { if (state.tasks.some(t => t.status === c.id && t.order == null)) normalizeOrder(c.id); });
+    setSync('local');
+    render();
+  }
+
+  function startDb(handle) {
+    mode = 'db'; db = handle;
+    const loaded = {};
+    for (const coll of COLLS) {
+      db.collection(coll).onSnapshot(snap => {
+        const items = snap.docs.map(d => ({ ...JSON.parse(JSON.stringify(d.data() || {})), id: d.id }));
+        state[coll] = items;
+        synced[coll] = new Map(items.map(x => [x.id, JSON.stringify(bodyOf(x))]));
+        loaded[coll] = true;
+        if (loaded.projects && loaded.tasks) { setSync('db'); render(); }
+      }, () => setSync('err', 'Connexion perdue, rechargez la page'));
+    }
   }
 
   // ================= Utilitaires =================
@@ -410,6 +492,7 @@
 
   // ================= Rendu =================
   function render() {
+    if (mode !== 'loading') for (const id of [...ui.projectFilter]) if (!projectById(id)) ui.projectFilter.delete(id);
     renderSidebar();
     renderTopbar();
     renderStats();
@@ -435,7 +518,7 @@
         <div class="progress" title="${pct}% terminé"><span style="width:${pct}%;background:${p.color}"></span></div>
       </div>`;
     }
-    if (!state.projects.length) html += `<div class="empty" style="margin-top:8px">Aucun projet.<br><button class="btn small primary" style="margin-top:8px" data-new-project>Créer un projet</button></div>`;
+    if (!state.projects.length && mode !== 'loading') html += `<div class="empty" style="margin-top:8px">Aucun projet.<br><button class="btn small primary" style="margin-top:8px" data-new-project>Créer un projet</button></div>`;
     list.innerHTML = html;
   }
 
@@ -501,7 +584,7 @@
           <div class="col-line" style="background:${col.color}"></div>
         </div>
         <div class="cards" data-drop="${col.id}">
-          ${tasks.map(cardHTML).join('') || `<div class="empty">${state.projects.length ? 'Aucune tâche' : 'Créez d\'abord un projet'}</div>`}
+          ${tasks.map(cardHTML).join('') || `<div class="empty">${mode === 'loading' ? 'Chargement…' : state.projects.length ? 'Aucune tâche' : 'Créez d\'abord un projet'}</div>`}
         </div>
       </section>`;
     }).join('');
@@ -712,11 +795,11 @@
     });
   }
 
-  function confirmDialog(title, text, onOk) {
+  function confirmDialog(title, text, onOk, okLabel = 'Supprimer') {
     openModal(`
       <header><h2>${esc(title)}</h2></header>
       <div class="body"><p style="margin:0;color:var(--muted)">${esc(text)}</p></div>
-      <footer><div class="spacer"></div><button class="btn" data-close autofocus>Annuler</button><button class="btn primary" id="okBtn" style="background:var(--danger);border-color:var(--danger)">Supprimer</button></footer>`,
+      <footer><div class="spacer"></div><button class="btn" data-close autofocus>Annuler</button><button class="btn primary" id="okBtn" style="background:var(--danger);border-color:var(--danger)">${esc(okLabel)}</button></footer>`,
       modal => $('#okBtn', modal).addEventListener('click', () => { closeModal(); onOk(); }));
   }
 
@@ -823,17 +906,21 @@
     ui.projectFilter.clear(); ui.priority = ''; ui.due = ''; ui.search = ''; $('#searchInput').value = ''; render();
   });
   $('#menuToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
-  $('#themeBtn').addEventListener('click', () => {
-    const root = document.documentElement;
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    save();
-  });
 
-  $('#exportBtn').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  $('#exportBtn').addEventListener('click', async () => {
+    const json = JSON.stringify(state, null, 2);
+    const filename = `kanban-projets-${todayISO()}.json`;
+    if (window.claude?.use) {
+      const dl = await window.claude.use('downloads');
+      if (!dl) return toast('Export indisponible ici');
+      try { await dl.save({ filename, data: json }); toast('Sauvegarde exportée'); }
+      catch (e) { if (e?.code !== 'declined') toast('Export impossible'); }
+      return;
+    }
+    const blob = new Blob([json], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `kanban-projets-${todayISO()}.json`;
+    a.download = filename;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
@@ -843,7 +930,13 @@
     try {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data.projects) || !Array.isArray(data.tasks)) throw new Error();
-      state = data; ui.projectFilter.clear(); render(); toast('Sauvegarde importée');
+      const okId = id => typeof id === 'string' && /^[A-Za-z0-9_\-~:@+]{1,60}$/.test(id);
+      const remap = {};
+      const projects = data.projects.map(p => { const id = okId(p.id) ? p.id : uid(); remap[p.id] = id; return { ...p, id }; });
+      const tasks = data.tasks.map(t => ({ ...t, id: okId(t.id) ? t.id : uid(), projectId: remap[t.projectId] ?? t.projectId }));
+      confirmDialog('Remplacer toutes les données ?', `La sauvegarde contient ${projects.length} projet(s) et ${tasks.length} tâche(s). Les données actuelles seront remplacées.`, () => {
+        state = { projects, tasks }; ui.projectFilter.clear(); render(); toast('Sauvegarde importée');
+      }, 'Remplacer');
     } catch { toast('Fichier invalide'); }
     e.target.value = '';
   });
@@ -893,8 +986,10 @@
   });
 
   // Initialisation de l'ordre pour les données de démo
-  COLUMNS.forEach(c => { if (state.tasks.some(t => t.status === c.id && t.order == null)) normalizeOrder(c.id); });
   render();
+  if (window.claude?.use) {
+    window.claude.use('db').then(h => h ? startDb(h) : startLocal(), startLocal);
+  } else startLocal();
 })();
 </script>
 </body>
