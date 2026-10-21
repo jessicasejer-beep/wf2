@@ -7,43 +7,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* Palette : Gunmetal #292F36 · Medium Turquoise #4ECDC4 · Mint Cream #F7FFF7 · Bittersweet #FF6B6B · Yellow Crayola #FFE66D */
   :root {
-    --bg: #F7FFF7; --surface: #FFFFFF; --column: #E8F3EE; --text: #292F36; --muted: #5E6873; --border: #D3E2DB;
-    --accent: #4ECDC4; --accent-soft: #DCF5F2; --accent-ink: #1B7F78; --on-accent: #292F36;
+    /* Interface */
+    --bg: #f6f7f9; --surface: #ffffff; --column: #eef0f3; --text: #1d2130; --muted: #6b7280; --border: #e3e6eb;
+    --accent: #5b4cf0; --accent-soft: #ecebfe; --accent-ink: #5b4cf0; --on-accent: #ffffff;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+    --shadow-lg: 0 12px 32px rgba(16,24,40,.18);
+    /* Projets et tâches : Gunmetal #292F36 · Turquoise #4ECDC4 · Mint Cream #F7FFF7 · Bittersweet #FF6B6B · Yellow #FFE66D */
     --danger: #FF6B6B; --danger-soft: #FFE5E5; --danger-ink: #C23B3B;
     --warn: #FFE66D; --warn-soft: #FFF6C7; --low-text: #6E5A00;
     --ok: #4ECDC4; --ok-soft: #DCF5F2; --ok-ink: #1B7F78;
     --medium-soft: #E4E8EC; --medium-ink: #292F36;
     --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4;
-    --shadow: 0 1px 2px rgba(41,47,54,.06), 0 1px 3px rgba(41,47,54,.08);
-    --shadow-lg: 0 12px 32px rgba(41,47,54,.18);
     --radius: 12px;
     color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #292F36; --surface: #333A42; --column: #22282E; --text: #F7FFF7; --muted: #A7B1B9; --border: #434B55;
-      --accent: #4ECDC4; --accent-soft: #2B4848; --accent-ink: #4ECDC4; --on-accent: #292F36;
-      --danger: #FF6B6B; --danger-soft: #4A2F33; --danger-ink: #FF8C8C;
-      --warn: #FFE66D; --warn-soft: #4A4630; --low-text: #FFE66D;
-      --ok: #4ECDC4; --ok-soft: #2B4848; --ok-ink: #4ECDC4;
-      --medium-soft: #3F4750; --medium-ink: #E3E8EC;
-      --col-todo: #F7FFF7; --col-progress: #FFE66D; --col-done: #4ECDC4;
-      --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-      --bg: #292F36; --surface: #333A42; --column: #22282E; --text: #F7FFF7; --muted: #A7B1B9; --border: #434B55;
-      --accent: #4ECDC4; --accent-soft: #2B4848; --accent-ink: #4ECDC4; --on-accent: #292F36;
-      --danger: #FF6B6B; --danger-soft: #4A2F33; --danger-ink: #FF8C8C;
-      --warn: #FFE66D; --warn-soft: #4A4630; --low-text: #FFE66D;
-      --ok: #4ECDC4; --ok-soft: #2B4848; --ok-ink: #4ECDC4;
-      --medium-soft: #3F4750; --medium-ink: #E3E8EC;
-      --col-todo: #F7FFF7; --col-progress: #FFE66D; --col-done: #4ECDC4;
-      --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
-      color-scheme: dark;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }

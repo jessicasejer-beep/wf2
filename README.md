@@ -11,7 +11,7 @@ Tableau kanban unique pour suivre tous vos projets en cours. Chaque projet a sa 
 - **Kanban** : colonnes À faire / En cours / Terminé, glisser-déposer entre colonnes et pour réordonner, ou menu « ⋯ › Déplacer vers ».
 - **Filtres** : par projet (clic ; Ctrl/⌘+clic pour en combiner plusieurs), priorité, échéance (en retard, aujourd'hui, 7 jours, sans date), recherche texte. Tri manuel / priorité / échéance.
 - **Indicateurs** : nombre de tâches, % d'avancement, priorités hautes ouvertes, tâches en retard (cliquable).
-- **Divers** : thème sombre, export / import JSON, version mobile.
+- **Divers** : export / import JSON, version mobile.
 
 ## Raccourcis clavier
 
