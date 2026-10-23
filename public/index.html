@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Infothèque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="logo"><span class="logo-mark">📚</span><span>Info<span class="accent">thèque</span></span></a>
+    <nav class="nav">
+      <a href="#/">Bibliothèque</a>
+      <a href="#/" data-scroll="library">Explorer</a>
+      <a href="#/favoris">Favoris</a>
+    </nav>
+    <button class="btn btn-primary btn-sm" data-open-upload>+ Ajouter</button>
+  </header>
+
+  <main id="app"></main>
+
+  <!-- Fenêtre d'upload -->
+  <div class="modal" id="upload-modal" hidden>
+    <div class="modal-card">
+      <button class="modal-close" data-close-modal aria-label="Fermer">✕</button>
+      <div id="upload-body"></div>
+    </div>
+  </div>
+
+  <!-- Zoom sur une image -->
+  <div class="lightbox" id="lightbox" hidden><img alt="" /></div>
+
+  <input type="file" id="file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden />
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="/vendor/marked.js"></script>
+  <script src="/vendor/purify.js"></script>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
