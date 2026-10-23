@@ -256,6 +256,11 @@ await section('Contrôles : chaque type d\'erreur', async () => {
   ok(/^2\s+erreurs/.test(dupGroup) && /L1, L3/.test(dupGroup), 'groupe « en double » : nombre + lignes L1, L3', dupGroup);
   ok(await page.locator('#body td.c-dup').count() === 2 && await page.locator('#body td.c-err').count() > 0 && await page.locator('#body td.c-warn').count() > 0, 'couleurs rouge / orange / jaune dans le tableau');
   ok(await page.locator('#alertBox button.primary').count() === 0, 'plus de bouton « Erreur suivante »');
+  await page.click('#alertBox [data-act="copyReport"]');
+  await page.waitForTimeout(200);
+  const rep = await page.evaluate(() => navigator.clipboard.readText());
+  ok(/^Rapport d'erreurs import\.csv/.test(rep) && /ERREURS BLOQUANTES/.test(rep) && /- 2 erreurs · Nom du fichier en double[^\n]*: L1, L3/.test(rep) && /DÉTAIL DES ERREURS\nL1 — /.test(rep), 'bouton « Copier le rapport d\'erreurs » : texte copié', rep.slice(0, 600));
+  ok(/Rapport copié/.test(await page.textContent('#alertBox [data-act="copyReport"]')), 'confirmation « Rapport copié »');
   // Filtre lignes à corriger
   await page.check('#onlyErr');
   const shown = await page.locator('#body tr').count();

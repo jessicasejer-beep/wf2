@@ -170,6 +170,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .groups .glabel { font-weight: 600; }
 .groups .gcols { font-size: 13px; opacity: 0.85; }
 .groups .glines .linkish { font-variant-numeric: tabular-nums; }
+#reportText { width: 100%; margin-top: 6px; font: 13px ui-monospace, Menlo, Consolas, monospace; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px; }
+.copybtn { background: var(--surface); color: var(--bad-text); border-color: var(--bad-border); font-weight: 600; }
+.copybtn:hover:not(:disabled) { background: var(--bad-bg); }
 .ghint { margin: 8px 0 0; font-size: 13px; opacity: 0.9; }
 .linkish {
   background: none; border: none; padding: 1px 0; color: inherit; text-decoration: underline; text-align: left;
@@ -351,6 +354,13 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; }
   <section class="step" aria-labelledby="h2s" id="step2">
     <h2 id="h2s"><span class="num">2</span> Compléter le tableau</h2>
     <div id="alertBox" class="alert" role="alert" aria-live="assertive"></div>
+    <div id="reportBox" class="box info" hidden style="margin-bottom:12px">
+      <strong>Copie automatique impossible dans ce navigateur</strong>
+      <p>Le rapport est sélectionné ci-dessous : copiez-le avec Ctrl+C.</p>
+      <label class="sr-only" for="reportText">Rapport d'erreurs</label>
+      <textarea id="reportText" rows="8" readonly></textarea>
+      <button type="button" id="reportClose">Fermer</button>
+    </div>
     <details id="warnBox" class="warnings" hidden><summary id="warnSum"></summary><div id="warnList"></div></details>
 
     <div class="legend" aria-label="Légende des couleurs">
@@ -1406,7 +1416,8 @@ function renderAlerts() {
   } else {
     cls = 'alert';
     const rowsBad = new Set(val.errors.map(e => e.r)).size;
-    html = `<div class="head"><h3>⚠ ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')} : import.csv ne peut pas encore être téléchargé</h3></div>
+    html = `<div class="head"><h3>⚠ ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')} : import.csv ne peut pas encore être téléchargé</h3>
+      <button type="button" class="copybtn" data-act="copyReport" title="Copier la liste des erreurs, en texte, pour la coller dans un e-mail ou un message">📋 Copier le rapport d'erreurs</button></div>
       ${groupsHtml(val.errors, ['erreur', 'erreurs'])}
       <p class="ghint">Cliquez sur un numéro de ligne (L16…) pour aller à la cellule ; le détail et la correction proposée s'affichent sur la cellule.</p>`;
   }
@@ -1453,7 +1464,50 @@ function gotoCell(r, c) {
   scrollToActive();
   updateBubble();
 }
+/* Rapport d'erreurs en texte (à coller dans un e-mail, Teams…) */
+function buildReportText() {
+  const val = S.val;
+  const rowsBad = new Set(val.errors.map(e => e.r)).size;
+  const L = [];
+  L.push(`Rapport d'erreurs import.csv (${fmtWhen(Date.now())})`);
+  if (S.lastImport) L.push(`Fichier : ${S.lastImport.name}`);
+  if (S.folder) L.push(`Dossier : ${S.folder.label} (${plural(S.folder.names.length, 'fichier', 'fichiers')})`);
+  L.push(`${plural(val.nonEmpty, 'ressource', 'ressources')}, ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')}.`);
+  const section = (items, word) => groupIssues(items).forEach(g => {
+    const rows = [...g.rows.values()].map(({ e, cols }) => `L${e.r + 1}` + (g.showCols ? ` (${cols.map(c => SHORT[c]).join(', ')})` : ''));
+    L.push(`- ${plural(g.n, word[0], word[1])} · ${g.label} : ${rows.join(', ')}`);
+  });
+  L.push('', 'ERREURS BLOQUANTES');
+  section(val.errors, ['erreur', 'erreurs']);
+  if (val.warnings.length) { L.push('', 'AVERTISSEMENTS (non bloquants)'); section(val.warnings, ['avertissement', 'avertissements']); }
+  L.push('', 'DÉTAIL DES ERREURS');
+  for (const e of val.errors) L.push(`L${e.r + 1} — ${e.msg}`);
+  return L.join('\n').replace(/\u00A0/g, ' ');
+}
+async function copyReport(btn) {
+  const text = buildReportText();
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { /* repli ci-dessous */ }
+  if (!ok) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+  }
+  if (ok) {
+    btn.textContent = '✓ Rapport copié : collez-le avec Ctrl+V';
+    setTimeout(() => { if (btn.isConnected) btn.textContent = "📋 Copier le rapport d'erreurs"; }, 3000);
+  } else {
+    const box = $('reportBox');
+    box.hidden = false;
+    $('reportText').value = text;
+    $('reportText').focus(); $('reportText').select();
+  }
+}
 document.addEventListener('click', e => {
+  const cb = e.target.closest('[data-act="copyReport"]');
+  if (cb) { copyReport(cb); return; }
   const g = e.target.closest('#alertBox [data-r], #warnList [data-r]');
   if (g) gotoCell(+g.dataset.r, +g.dataset.c);
 });
@@ -2035,6 +2089,8 @@ setupDrop($('cardA'), 'A');
 setupDrop($('cardB'), 'B');
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => e.preventDefault());
+
+$('reportClose').onclick = () => { $('reportBox').hidden = true; };
 
 /* Supprimer les données : seul moyen d'effacer le travail enregistré */
 function updateResetBtn() { $('bReset').disabled = !hasData() && !S.folder; }
