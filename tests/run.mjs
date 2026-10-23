@@ -259,7 +259,8 @@ await section('Contrôles : chaque type d\'erreur', async () => {
   await page.click('#alertBox [data-act="copyReport"]');
   await page.waitForTimeout(200);
   const rep = await page.evaluate(() => navigator.clipboard.readText());
-  ok(/^Rapport d'erreurs import\.csv/.test(rep) && /ERREURS BLOQUANTES/.test(rep) && /- 2 erreurs · Nom du fichier en double[^\n]*: L1, L3/.test(rep) && /DÉTAIL DES ERREURS\nL1 — /.test(rep), 'bouton « Copier le rapport d\'erreurs » : texte copié', rep.slice(0, 600));
+  const titleShown = (await page.textContent('#alertBox h3')).replace(/^⚠\s*/, '').replace(/\u00A0/g, ' ');
+  ok(rep.split('\n')[0] === titleShown && /\n2 erreurs · Nom du fichier en double[^\n]*: L1, L3/.test(rep) && !/DÉTAIL|AVERTISSEMENTS/.test(rep) && rep.split('\n').length === 2 + await page.locator('#alertBox .groups li').count(), 'texte copié identique au bandeau (titre + groupes, sans détail)', rep);
   ok(/Rapport copié/.test(await page.textContent('#alertBox [data-act="copyReport"]')), 'confirmation « Rapport copié »');
   // Filtre lignes à corriger
   await page.check('#onlyErr');

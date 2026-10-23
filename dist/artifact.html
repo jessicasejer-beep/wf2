@@ -1466,22 +1466,16 @@ function gotoCell(r, c) {
 }
 /* Rapport d'erreurs en texte (à coller dans un e-mail, Teams…) */
 function buildReportText() {
+  // Même contenu que le bandeau rouge affiché : titre puis erreurs regroupées par type.
   const val = S.val;
   const rowsBad = new Set(val.errors.map(e => e.r)).size;
-  const L = [];
-  L.push(`Rapport d'erreurs import.csv (${fmtWhen(Date.now())})`);
-  if (S.lastImport) L.push(`Fichier : ${S.lastImport.name}`);
-  if (S.folder) L.push(`Dossier : ${S.folder.label} (${plural(S.folder.names.length, 'fichier', 'fichiers')})`);
-  L.push(`${plural(val.nonEmpty, 'ressource', 'ressources')}, ${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')}.`);
-  const section = (items, word) => groupIssues(items).forEach(g => {
-    const rows = [...g.rows.values()].map(({ e, cols }) => `L${e.r + 1}` + (g.showCols ? ` (${cols.map(c => SHORT[c]).join(', ')})` : ''));
-    L.push(`- ${plural(g.n, word[0], word[1])} · ${g.label} : ${rows.join(', ')}`);
-  });
-  L.push('', 'ERREURS BLOQUANTES');
-  section(val.errors, ['erreur', 'erreurs']);
-  if (val.warnings.length) { L.push('', 'AVERTISSEMENTS (non bloquants)'); section(val.warnings, ['avertissement', 'avertissements']); }
-  L.push('', 'DÉTAIL DES ERREURS');
-  for (const e of val.errors) L.push(`L${e.r + 1} — ${e.msg}`);
+  const L = [`${plural(val.errors.length, 'erreur bloquante', 'erreurs bloquantes')} sur ${plural(rowsBad, 'ligne', 'lignes')} : import.csv ne peut pas encore être téléchargé`, ''];
+  for (const g of groupIssues(val.errors)) {
+    const rows = [...g.rows.values()];
+    const shown = rows.slice(0, MAX_LINES_SHOWN).map(({ e, cols }) => `L${e.r + 1}` + (g.showCols ? ` (${cols.map(c => SHORT[c]).join(', ')})` : '')).join(', ');
+    const more = rows.length > MAX_LINES_SHOWN ? ` … et ${rows.length - MAX_LINES_SHOWN} autres lignes` : '';
+    L.push(`${plural(g.n, 'erreur', 'erreurs')} · ${g.label} : ${shown}${more}`);
+  }
   return L.join('\n').replace(/\u00A0/g, ' ');
 }
 async function copyReport(btn) {
