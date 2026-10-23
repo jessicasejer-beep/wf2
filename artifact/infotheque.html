@@ -1,0 +1,807 @@
+<title>Infothèque</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+/* Layout : bibliothèque façon site de recettes — grand dépôt en hero, "À la une" en 3 grandes cartes, grille de fiches, page "recette" en 2 colonnes. */
+:root {
+  --bg: #fbfaf6; --surface: #ffffff; --surface-2: #f3f1eb; --ink: #1d1b18; --muted: #6f6a61; --line: #e9e5dc;
+  --accent: #f5a524; --accent-strong: #e8930c; --accent-ink: #a86200; --accent-soft: #fff3da; --on-accent: #ffffff;
+  --ok: #2f9e5d; --danger: #d14343; --danger-soft: #fdecec;
+  --glass: rgba(255,255,255,.9); --pill: rgba(255,255,255,.95); --scrim: rgba(29,27,24,.45);
+  --hero-a: #ffffff; --hero-b: #fff1d4; --dash: #f2c66f;
+  --feat-a: #f8b54a; --feat-b: #fbd79a; --feat-c: #fff6e8;
+  --t-blue: #e7f0ff; --t-orange: #fff0de; --t-green: #e8f6ec; --t-yellow: #fff7d4; --t-violet: #f0ebff; --t-pink: #ffe8ed; --t-teal: #e4f6f5;
+  --shadow: 0 1px 2px rgba(30,25,15,.05), 0 8px 24px rgba(30,25,15,.07);
+  --shadow-lg: 0 20px 50px rgba(30,25,15,.16);
+  --display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 22px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16130f; --surface: #211d17; --surface-2: #2a251e; --ink: #f4efe6; --muted: #a9a195; --line: #3a342a;
+  --accent: #f5a524; --accent-strong: #ffb43d; --accent-ink: #ffc56a; --accent-soft: #3a2b12; --on-accent: #1d1406;
+  --ok: #4cc27f; --danger: #ff7272; --danger-soft: #3d1d1d;
+  --glass: rgba(33,29,23,.9); --pill: rgba(33,29,23,.94); --scrim: rgba(0,0,0,.6);
+  --hero-a: #2a2219; --hero-b: #3a2b12; --dash: #8a6420;
+  --feat-a: #c97f12; --feat-b: #8f5c14; --feat-c: #3a2b12;
+  --t-blue: #1d2838; --t-orange: #382718; --t-green: #1b3024; --t-yellow: #353015; --t-violet: #282238; --t-pink: #3a2129; --t-teal: #183331;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #16130f; --surface: #211d17; --surface-2: #2a251e; --ink: #f4efe6; --muted: #a9a195; --line: #3a342a;
+  --accent: #f5a524; --accent-strong: #ffb43d; --accent-ink: #ffc56a; --accent-soft: #3a2b12; --on-accent: #1d1406;
+  --ok: #4cc27f; --danger: #ff7272; --danger-soft: #3d1d1d;
+  --glass: rgba(33,29,23,.9); --pill: rgba(33,29,23,.94); --scrim: rgba(0,0,0,.6);
+  --hero-a: #2a2219; --hero-b: #3a2b12; --dash: #8a6420;
+  --feat-a: #c97f12; --feat-b: #8f5c14; --feat-c: #3a2b12;
+  --t-blue: #1d2838; --t-orange: #382718; --t-green: #1b3024; --t-yellow: #353015; --t-violet: #282238; --t-pink: #3a2129; --t-teal: #183331;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.accent { color: var(--accent); }
+.muted { color: var(--muted); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main.wrap { padding-block: 0 72px; }
+
+/* Barre du haut */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); }
+.topbar .wrap { display: flex; align-items: center; gap: 20px; padding-block: 14px; }
+.logo { font-family: var(--display); font-weight: 800; font-size: 22px; display: flex; align-items: center; gap: 10px; background: none; border: 0; cursor: pointer; padding: 0; }
+.logo-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; }
+.logo-mark svg { width: 18px; height: 18px; }
+.nav { display: flex; gap: 6px; margin-left: auto; }
+.nav button { border: 0; background: none; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 500; }
+.nav button[aria-current="page"] { background: var(--surface-2); }
+
+/* Boutons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 12px; padding: 12px 20px; font-weight: 700; cursor: pointer; transition: transform .15s, background .15s; text-decoration: none; }
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: .55; cursor: default; transform: none; }
+.btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent); }
+.btn-primary:hover { background: var(--accent-strong); }
+.btn-ghost { background: var(--surface-2); color: var(--ink); }
+.btn-danger { background: transparent; color: var(--danger); }
+.btn-danger.armed { background: var(--danger); color: var(--on-accent); }
+.btn-sm { padding: 8px 13px; font-size: 14px; border-radius: 10px; }
+.btn-lg { padding: 15px 26px; font-size: 16px; width: 100%; }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 44px; align-items: center; padding-block: 36px 8px; }
+.hero h1 { font-size: clamp(34px, 5vw, 58px); font-weight: 800; }
+.hero p { font-size: 17px; max-width: 30em; margin: 16px 0 24px; }
+.stats { display: flex; gap: 32px; font-variant-numeric: tabular-nums; }
+.stats strong { display: block; font-family: var(--display); font-size: 28px; }
+.stats span { color: var(--muted); font-size: 14px; }
+.dropzone { position: relative; min-height: 320px; border-radius: 32px; cursor: pointer; background: radial-gradient(circle at 30% 20%, var(--hero-a) 0%, var(--hero-b) 72%); border: 2.5px dashed var(--dash); display: grid; place-items: center; text-align: center; transition: transform .2s, border-color .2s, box-shadow .2s; }
+.dropzone:hover, .dropzone.over { transform: scale(1.01); border-color: var(--accent); box-shadow: var(--shadow-lg); }
+.dropzone[aria-disabled="true"] { cursor: default; transform: none; box-shadow: none; }
+.dz-inner { padding: 28px; display: grid; gap: 10px; justify-items: center; }
+.dz-icon { width: 70px; height: 70px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 30px; box-shadow: var(--shadow); }
+.dropzone h3 { font-size: 24px; }
+.float { position: absolute; font-size: 32px; animation: bob 5s ease-in-out infinite; pointer-events: none; }
+.f1 { top: 20px; left: 26px; } .f2 { top: 30px; right: 30px; animation-delay: -1.5s; } .f3 { bottom: 26px; left: 40px; animation-delay: -3s; } .f4 { bottom: 22px; right: 28px; animation-delay: -2s; }
+@keyframes bob { 50% { transform: translateY(-10px) rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .float { animation: none; } * { transition: none !important; } }
+
+/* Sections */
+.section { padding-top: 52px; }
+.section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.section-head h2 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; }
+.section-head p { margin: 4px 0 0; }
+.pager { display: flex; align-items: center; gap: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pager button { border: 0; background: none; font-size: 28px; line-height: 1; color: var(--accent); cursor: pointer; }
+.pager button:disabled { opacity: .3; cursor: default; }
+
+.featured { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature { background: var(--surface-2); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.feature h3 { font-size: 24px; min-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.feature.hl { background: linear-gradient(170deg, var(--feat-a) 0%, var(--feat-b) 45%, var(--feat-c) 100%); }
+.feature.hl h3 { color: #fff; }
+.feature-desc { margin: -4px 0 0; font-size: 14px; color: #fff; opacity: .92; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.feature-img { position: relative; flex: 1; min-height: 250px; border-radius: 16px; overflow: hidden; background: var(--surface); }
+.feature-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.feature-tags { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { background: var(--pill); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.pill-float { position: absolute; top: 12px; right: 12px; }
+.feature-cta { display: flex; justify-content: space-between; align-items: center; background: var(--ink); color: var(--bg); border: 0; border-radius: 999px; padding: 11px 12px 11px 20px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.feature-cta span { width: 28px; height: 28px; border-radius: 50%; background: var(--bg); color: var(--ink); display: grid; place-items: center; }
+
+.search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; width: min(320px, 100%); }
+.search input { border: 0; outline: 0; font: inherit; flex: 1; min-width: 0; background: none; color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 15px; font-weight: 500; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+.card { background: var(--surface); border: 0; padding: 0; text-align: left; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s; }
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.card-img { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--surface-2); overflow: hidden; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform .4s; }
+.card:hover .card-img img { transform: scale(1.04); }
+.card-meta { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 14px; font-size: 12.5px; font-weight: 500; background: var(--glass); backdrop-filter: blur(6px); font-variant-numeric: tabular-nums; }
+.badge { position: absolute; top: 10px; right: 10px; background: var(--surface); color: var(--danger); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; box-shadow: var(--shadow); }
+.badge.busy { left: 10px; right: auto; width: auto; padding: 0 10px; border-radius: 999px; color: var(--ink); font-size: 12px; gap: 6px; display: flex; align-items: center; }
+.card-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 5px; }
+.card-cat { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.card-body h3 { font-size: 19px; }
+.link { color: var(--accent-ink); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+
+.empty { text-align: center; padding: 52px 20px; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); display: grid; gap: 8px; justify-items: center; }
+.empty-emoji { font-size: 44px; }
+.empty h3 { font-size: 22px; }
+.empty p { margin: 0; max-width: 34em; }
+
+/* Fiche */
+.back { display: inline-block; margin: 18px 0; color: var(--muted); font-weight: 500; background: none; border: 0; cursor: pointer; padding: 0; }
+.detail { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 40px; align-items: start; }
+.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); display: grid; gap: 14px; }
+.detail-img { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); cursor: zoom-in; max-height: 520px; border: 0; padding: 0; }
+.detail-img img { width: 100%; object-fit: cover; object-position: top; }
+.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.meta div { background: var(--surface); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }
+.meta span { display: block; font-size: 12px; color: var(--muted); }
+.meta strong { font-size: 15px; }
+.side-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.title-row { display: flex; gap: 12px; align-items: flex-start; }
+.title-row h1 { font-size: clamp(30px, 4vw, 44px); font-weight: 800; flex: 1; min-width: 0; }
+.lead { font-size: 18px; margin: 12px 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { background: var(--accent-soft); color: var(--accent-ink); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 500; }
+.alert { background: var(--danger-soft); color: var(--danger); border-radius: 12px; padding: 10px 14px; font-size: 14px; margin: 10px 0 0; }
+.note { background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+.h-small { font-size: 20px; margin: 30px 0 12px; }
+.edit-form { display: grid; gap: 10px; background: var(--surface); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+.edit-form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 500; }
+.edit-form input, .edit-form textarea, .edit-form select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.edit-form .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; border: 2px solid transparent; background: var(--tint); border-radius: 18px; padding: 14px; cursor: pointer; transition: transform .15s, border-color .15s; }
+.tile:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--line); }
+.tile.done { border-color: var(--ok); }
+.tile:disabled { cursor: progress; }
+.tile-emoji { font-size: 26px; height: 32px; display: flex; align-items: center; }
+.tile-label { font-weight: 700; }
+.tile-hint { font-size: 12.5px; color: var(--muted); }
+.tile.done .tile-hint { color: var(--ok); font-weight: 500; }
+
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 32px; border-bottom: 1px solid var(--line); }
+.tab { border: 0; background: none; font-weight: 500; padding: 10px 14px; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.result { background: var(--surface); border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow); padding: 16px 26px 26px; min-width: 0; }
+.result-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); margin-bottom: 6px; }
+.result-bar div { display: flex; gap: 6px; flex-wrap: wrap; }
+.redesign { width: 100%; height: 75vh; border: 0; border-radius: 14px; background: #fff; margin-top: 10px; }
+.prose { font-size: 16.5px; line-height: 1.7; max-width: 68ch; overflow-wrap: anywhere; }
+.prose h2 { font-size: 22px; margin: 24px 0 8px; }
+.prose h3 { font-size: 18px; margin: 18px 0 6px; }
+.prose ul, .prose ol { padding-left: 22px; }
+.prose blockquote { margin: 10px 0; padding: 10px 16px; background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0; }
+.prose blockquote p { margin: 0; }
+.prose code { background: var(--surface-2); padding: 2px 6px; border-radius: 6px; font-size: .9em; }
+.prose pre { overflow-x: auto; background: var(--surface-2); padding: 12px; border-radius: 10px; }
+.prose table { border-collapse: collapse; display: block; overflow-x: auto; }
+.prose th, .prose td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+.thinking { display: flex; gap: 10px; align-items: center; color: var(--muted); padding: 18px 0; }
+
+/* Modale */
+.modal { position: fixed; inset: 0; z-index: 50; background: var(--scrim); backdrop-filter: blur(4px); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal-card { position: relative; background: var(--surface); border-radius: 28px; padding: 30px; width: min(980px, 100%); max-height: 92vh; overflow: auto; box-shadow: var(--shadow-lg); }
+.modal-close { position: absolute; top: 14px; right: 14px; border: 0; background: var(--surface-2); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+.modal-card h2 { font-size: 30px; font-weight: 800; }
+.upload-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 28px; }
+.upload-grid > div { min-width: 0; display: grid; gap: 14px; align-content: start; }
+.upload-grid p { margin: 0; }
+.previews { background: var(--surface-2); border-radius: 20px; padding: 12px; max-height: 560px; overflow: auto; display: grid; gap: 10px; align-content: start; }
+.previews.multi { grid-template-columns: 1fr 1fr; }
+.previews img { border-radius: 12px; width: 100%; }
+.choices { display: grid; gap: 9px; }
+.choice { display: flex; align-items: center; gap: 14px; padding: 11px 14px; border-radius: 16px; background: var(--tint); cursor: pointer; border: 2px solid transparent; }
+.choice:has(input:checked) { border-color: var(--accent); }
+.choice input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.choice-emoji { font-size: 24px; }
+.choice small { display: block; color: var(--muted); font-size: 13px; }
+.progress { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 10px; }
+.progress li { display: flex; gap: 14px; align-items: center; background: var(--surface-2); border-radius: 16px; padding: 13px 16px; }
+.progress small { display: block; color: var(--muted); font-size: 13px; }
+.progress li.ko small { color: var(--danger); }
+.p-icon { width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 800; }
+.ok .p-icon { background: var(--ok); color: var(--on-accent); }
+.ko .p-icon { background: var(--danger); color: var(--on-accent); }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; flex: none; }
+.spinner.sm { width: 12px; height: 12px; border-width: 2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.86); display: grid; place-items: center; padding: 24px; cursor: zoom-out; overflow: auto; }
+.lightbox img { max-width: min(1200px, 100%); border-radius: 12px; }
+.toast { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 70; background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 14px; box-shadow: var(--shadow-lg); font-weight: 500; max-width: calc(100% - 32px); }
+.toast.error { background: var(--danger); color: var(--on-accent); }
+
+@media (max-width: 900px) {
+  .hero, .detail, .upload-grid, .featured { grid-template-columns: 1fr; }
+  .side { position: static; }
+  .featured .feature:not(.hl) { display: none; }
+}
+@media (max-width: 560px) {
+  .nav button { padding: 8px; font-size: 14px; }
+  .logo { font-size: 19px; }
+  .modal-card { padding: 22px 16px; }
+  .result { padding: 14px 16px 20px; }
+  .stats { gap: 20px; }
+}
+</style>
+
+<header class="topbar">
+  <div class="wrap">
+    <button class="logo" data-go="home" aria-label="Accueil de l'Infothèque">
+      <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M4 5v14M9 5v14M14 6l5 13"/></svg></span>
+      <span>Info<span class="accent">thèque</span></span>
+    </button>
+    <nav class="nav">
+      <button data-go="home" id="nav-home">Bibliothèque</button>
+      <button data-go="favs" id="nav-favs">Favoris</button>
+    </nav>
+    <button class="btn btn-primary btn-sm" data-open-upload id="add-btn">+ Ajouter</button>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<div class="modal" id="modal" hidden><div class="modal-card"><button class="modal-close" data-close-modal aria-label="Fermer">✕</button><div id="modal-body"></div></div></div>
+<div class="lightbox" id="lightbox" hidden><img alt=""></div>
+<input type="file" id="file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+// ---------- Ce que Claude sait faire avec une infographie ----------
+const CONTEXT = `Tu es l'éditeur d'une bibliothèque de connaissances en français consacrée à l'intelligence artificielle et au product management.
+L'utilisatrice y dépose des infographies trouvées sur internet (souvent en anglais) et veut se les approprier.
+Écris toujours en français clair et naturel, sans jargon inutile. Quand un terme anglais est d'usage courant (prompt, backlog, roadmap, fine-tuning…), garde-le et explique-le brièvement la première fois.
+Reste fidèle à l'infographie jointe : n'invente ni chiffres ni sources. Si un passage est illisible, dis-le.`;
+
+const ACTIONS = [
+  { key: "translate", label: "Traduire en français", emoji: "🇫🇷", hint: "Tout le texte, fidèlement", tint: "--t-blue", tier: "default",
+    prompt: `Traduis intégralement le texte de cette infographie en français. Respecte sa structure : titres, sections, listes et légendes dans le même ordre, avec des titres Markdown (##, ###) et des listes. Aucun commentaire : uniquement la traduction.` },
+  { key: "simplify", label: "Expliquer simplement", emoji: "🧒", hint: "Mots simples et analogies", tint: "--t-orange", tier: "default",
+    prompt: `Explique le contenu de cette infographie comme à une personne curieuse qui n'y connaît rien. Commence par une phrase qui dit de quoi ça parle. Mots simples, phrases courtes, une ou deux analogies du quotidien. Termine par une section "## À retenir" de 3 points maximum. Markdown, 300 mots maximum.` },
+  { key: "summary", label: "Résumer", emoji: "📝", hint: "L'essentiel en quelques puces", tint: "--t-green", tier: "default",
+    prompt: `Résume cette infographie : une phrase d'accroche en gras avec l'idée principale, puis 3 à 6 puces avec les points clés. Markdown, 150 mots maximum.` },
+  { key: "concept", label: "Expliquer le concept", emoji: "💡", hint: "En profondeur, avec exemples", tint: "--t-yellow", tier: "complex",
+    prompt: `Identifie le ou les concepts principaux de cette infographie et explique-les en profondeur pour une professionnelle du product management qui monte en compétence sur l'IA. Markdown avec ces sections : ## Le concept en une phrase / ## Comment ça marche / ## Pourquoi c'est important (pour un produit, une équipe) / ## Exemple concret / ## Limites et pièges courants / ## Pour aller plus loin (notions liées, sans inventer de liens).` },
+  { key: "practice", label: "Mettre en pratique", emoji: "🛠️", hint: "L'appliquer en équipe produit", tint: "--t-violet", tier: "default",
+    prompt: `À partir de cette infographie, propose comment l'appliquer concrètement dans une équipe produit. Markdown avec : ## Quand l'utiliser / ## Plan d'action (3 à 6 étapes numérotées) / ## Questions à se poser en atelier / ## Erreurs à éviter.` },
+  { key: "quiz", label: "Quiz de révision", emoji: "🎯", hint: "5 questions pour vérifier", tint: "--t-pink", tier: "default",
+    prompt: `Crée un quiz de 5 questions pour vérifier qu'on a compris cette infographie. Pour chaque question : la question en gras, 3 propositions (A, B, C), puis la bonne réponse et une explication d'une phrase dans un bloc de citation (> ). Markdown.` },
+  { key: "redesign", label: "Refaire en français", emoji: "🎨", hint: "Nouvelle infographie traduite", tint: "--t-teal", tier: "complex", html: true,
+    prompt: `Recrée cette infographie en français sous forme d'une page HTML autonome : un seul document complet (<!doctype html>…), CSS dans une balise <style>, aucune ressource externe, aucun JavaScript. Tu peux utiliser du SVG inline pour schémas, icônes et flèches. Garde la structure et la hiérarchie de l'original mais traduis tout le texte. Design moderne et aéré, coins arrondis, palette douce et cohérente, bon contraste, police system-ui, largeur max 900px centrée, adapté au mobile. Réponds uniquement avec le code HTML.` },
+];
+const ACTION = Object.fromEntries(ACTIONS.map((a) => [a.key, a]));
+const DEFAULT_ACTIONS = ["translate", "summary"];
+const CATEGORIES = ["IA", "Product Management", "IA & Produit", "Data", "Autre"];
+const LEVELS = ["Débutant", "Intermédiaire", "Avancé"];
+const CAT_EMOJI = { IA: "🤖", "Product Management": "🧭", "IA & Produit": "🚀", Data: "📊", Autre: "✨" };
+
+// ---------- État ----------
+const S = {
+  db: null, assets: null, sample: null, downloads: null, ready: false,
+  items: [], results: {}, view: { name: "home" }, filter: "Tous", search: "", page: 0,
+  running: {}, // "id:action" -> texte en cours (ou "")
+  tab: {}, editing: false, armedDelete: false,
+};
+let unsubResults = null;
+const files = { pending: [] };
+
+// ---------- Utilitaires ----------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const md = (t) => (window.marked && window.DOMPurify ? DOMPurify.sanitize(marked.parse(t || "")) : `<p>${esc(t)}</p>`);
+const imgSrc = (it) => (it.assetId ? "/_blob/" + it.assetId : "");
+const doneCount = (it) => Object.values(it.done || {}).filter(Boolean).length;
+
+function toast(msg, err = false) {
+  const t = $("#toast");
+  t.textContent = msg; t.classList.toggle("error", err); t.hidden = false;
+  clearTimeout(t._h); t._h = setTimeout(() => (t.hidden = true), err ? 7000 : 3000);
+}
+
+function sampleError(e) {
+  const map = {
+    not_granted: "Claude n'a pas été autorisé pour cette page. Rechargez-la et acceptez la demande d'accès.",
+    sampling_disabled: "Claude n'est pas disponible pour ce compte.",
+    rate_limited: "Trop de demandes d'un coup ou limite d'usage atteinte. Réessayez dans un moment.",
+    session_expired: "Votre session a expiré : reconnectez-vous à claude.ai.",
+    image_rejected: "Cette image n'a pas pu être lue (format ou taille). Essayez une autre version.",
+    images_unavailable: "Cette vue ne peut pas envoyer d'images à Claude. Ouvrez la page sur claude.ai.",
+    refused: "Claude a refusé de traiter cette infographie.",
+    invalid_json: "La réponse de Claude était mal formée. Réessayez.",
+    empty_completion: "Claude n'a rien répondu. Réessayez.",
+    cancelled: "Arrêté.",
+  };
+  return map[e?.code] || "Claude n'a pas pu répondre (erreur passagère). Réessayez.";
+}
+
+// Une seule écriture à la fois par fiche.
+const writeChains = {};
+function updateItem(id, patch) {
+  const run = () => S.db.doc("items/" + id).update(patch);
+  writeChains[id] = (writeChains[id] || Promise.resolve()).then(run, run);
+  return writeChains[id];
+}
+
+// L'image d'une fiche, pour la renvoyer à Claude.
+async function imageBlob(it) {
+  try {
+    const r = await fetch(imgSrc(it));
+    if (r.ok) return await r.blob();
+  } catch {}
+  const img = new Image();
+  img.src = imgSrc(it);
+  await img.decode();
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  c.getContext("2d").drawImage(img, 0, 0);
+  return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("image"))), "image/png"));
+}
+
+// ---------- Appels à Claude ----------
+async function analyze(blob) {
+  const meta = await S.sample.json(
+    `${CONTEXT}
+
+Analyse l'infographie jointe pour la classer dans la bibliothèque. Réponds uniquement avec un objet JSON de cette forme :
+{"title": "titre court et accrocheur en français, 60 caractères max", "description": "une ou deux phrases en français qui donnent envie de lire la fiche", "category": "une valeur parmi ${CATEGORIES.join(" | ")}", "tags": ["3 à 5 mots-clés courts en français"], "level": "une valeur parmi ${LEVELS.join(" | ")}", "readingMinutes": 4, "sourceLanguage": "langue du texte de l'infographie, en français (ex. anglais)"}`,
+    { images: [blob], effort: "low" }
+  );
+  return {
+    title: String(meta?.title || "Infographie sans titre").slice(0, 90),
+    description: String(meta?.description || ""),
+    category: CATEGORIES.includes(meta?.category) ? meta.category : "Autre",
+    tags: Array.isArray(meta?.tags) ? meta.tags.map(String).slice(0, 5) : [],
+    level: LEVELS.includes(meta?.level) ? meta.level : "Intermédiaire",
+    readingMinutes: Math.max(1, Math.round(Number(meta?.readingMinutes) || 3)),
+    sourceLanguage: String(meta?.sourceLanguage || ""),
+  };
+}
+
+async function runAction(it, key, { blob, fresh = false } = {}) {
+  const a = ACTION[key], tag = it.id + ":" + key;
+  if (tag in S.running) return;
+  S.running[tag] = "";
+  if (S.view.name === "detail" && S.view.id === it.id) { S.tab[it.id] = key; render(); }
+  try {
+    const image = blob || (await imageBlob(it));
+    let { text, truncated } = await S.sample(`${CONTEXT}\n\nL'image jointe est l'infographie.\n\n${a.prompt}`, {
+      images: [image], modelTier: a.tier, cache: fresh ? false : undefined,
+      onText: ({ text }) => { S.running[tag] = text; paintLive(it.id, key); },
+    });
+    if (a.html) { const m = text.match(/```(?:html)?\s*([\s\S]*?)```/i); if (m) text = m[1].trim(); }
+    await S.db.doc(`items/${it.id}/results/${key}`).set({ content: text, format: a.html ? "html" : "markdown", createdAt: new Date().toISOString(), truncated: !!truncated });
+    await updateItem(it.id, { done: { [key]: true } });
+    toast(`${a.emoji} ${a.label} : c'est prêt`);
+    return true;
+  } catch (e) {
+    toast(sampleError(e), true);
+    throw e;
+  } finally {
+    delete S.running[tag];
+    if (S.view.name === "detail" && S.view.id === it.id) render();
+  }
+}
+
+// Affiche le texte au fur et à mesure qu'il s'écrit, sans tout redessiner.
+function paintLive(id, key) {
+  const el = $(`#live-${key}`);
+  if (!el || S.view.id !== id) return;
+  const text = S.running[id + ":" + key] || "";
+  el.innerHTML = ACTION[key].html ? `<p class="muted">Écriture du HTML… ${text.length.toLocaleString("fr-FR")} caractères</p>` : md(text);
+}
+
+// ---------- Navigation ----------
+function go(name, id) {
+  if (unsubResults && !(name === "detail" && id === S.view.id)) { unsubResults(); unsubResults = null; }
+  S.view = { name, id }; S.editing = false; S.armedDelete = false;
+  if (name === "detail" && !unsubResults && S.db) {
+    unsubResults = S.db.collection(`items/${id}/results`).onSnapshot(
+      (snap) => { S.results[id] = Object.fromEntries(snap.docs.map((d) => [d.id, d.data()])); if (S.view.id === id) render(); },
+      () => {}
+    );
+  }
+  render(); window.scrollTo({ top: 0 });
+}
+
+function render() {
+  $("#nav-home").setAttribute("aria-current", S.view.name === "home" ? "page" : "false");
+  $("#nav-favs").setAttribute("aria-current", S.view.name === "favs" ? "page" : "false");
+  $("#add-btn").hidden = !S.assets;
+  if (!S.ready) return ($("#app").innerHTML = `<div class="thinking" style="justify-content:center;padding:80px 0"><span class="spinner"></span> Ouverture de la bibliothèque…</div>`);
+  if (!S.db) return ($("#app").innerHTML = `<div class="empty" style="margin-top:40px"><div class="empty-emoji">🔒</div><h3>Bibliothèque indisponible ici</h3><p class="muted">Ouvrez ce lien sur claude.ai en étant connectée pour retrouver vos infographies.</p></div>`);
+  if (S.view.name === "detail") return renderDetail();
+  renderHome(S.view.name === "favs");
+}
+
+// ---------- Accueil ----------
+function renderHome(favs) {
+  const all = S.items;
+  const cats = ["Tous", ...CATEGORIES.filter((c) => all.some((i) => i.category === c))];
+  if (!cats.includes(S.filter)) S.filter = "Tous";
+  const q = S.search.trim().toLowerCase();
+  const list = all.filter((it) => (!favs || it.favorite) && (S.filter === "Tous" || it.category === S.filter) &&
+    (!q || [it.title, it.description, ...(it.tags || [])].join(" ").toLowerCase().includes(q)));
+  const fiches = all.reduce((n, it) => n + doneCount(it), 0);
+  const canAdd = !!S.assets && !!S.sample;
+
+  $("#app").innerHTML = `
+    ${favs ? "" : `
+    <section class="hero">
+      <div>
+        <h1>Apprendre l'IA &amp; le produit, <span class="accent">une infographie</span> à la fois</h1>
+        <p class="muted">Déposez les infographies trouvées sur internet. Traduction, résumé, explication du concept ou version française : votre bibliothèque se remplit toute seule.</p>
+        <div class="stats">
+          <div><strong>${all.length}</strong><span>infographies</span></div>
+          <div><strong>${fiches}</strong><span>fiches générées</span></div>
+          <div><strong>${all.filter((i) => i.favorite).length}</strong><span>favoris</span></div>
+        </div>
+      </div>
+      <div class="dropzone" id="dropzone" tabindex="${canAdd ? 0 : -1}" role="button" aria-disabled="${!canAdd}" aria-label="Déposer une infographie">
+        <span class="float f1">🤖</span><span class="float f2">💡</span><span class="float f3">🧭</span><span class="float f4">📊</span>
+        <div class="dz-inner">
+          <div class="dz-icon">⬆️</div>
+          <h3>${canAdd ? "Déposez vos infographies ici" : "Ajout réservé à la propriétaire"}</h3>
+          <p class="muted" style="margin:0">${canAdd ? "ou cliquez, ou collez une image (Ctrl+V) · PNG, JPG, WebP, GIF" : "Vous pouvez consulter la bibliothèque."}</p>
+          ${canAdd ? `<span class="btn btn-primary">Choisir des fichiers</span>` : ""}
+        </div>
+      </div>
+    </section>
+    ${featured(all)}`}
+    <section class="section" id="library">
+      <div class="section-head">
+        <div>
+          <h2>${favs ? `Mes <span class="accent">favoris</span>` : `Découvrir, comprendre, <span class="accent">retenir</span>`}</h2>
+          <p class="muted">${list.length} infographie${list.length > 1 ? "s" : ""}</p>
+        </div>
+        <label class="search"><span aria-hidden="true">🔍</span><input type="search" id="search" placeholder="Rechercher un sujet, un tag…" value="${esc(S.search)}" aria-label="Rechercher"></label>
+      </div>
+      <div class="chips">${cats.map((c) => `<button class="chip" aria-pressed="${c === S.filter}" data-filter="${esc(c)}">${c === "Tous" ? "🌈" : CAT_EMOJI[c]} ${esc(c)}</button>`).join("")}</div>
+      ${list.length ? `<div class="grid">${list.map(card).join("")}</div>` : `
+        <div class="empty">
+          <div class="empty-emoji">${favs ? "♡" : "🍽️"}</div>
+          <h3>${all.length ? (favs ? "Aucun favori pour l'instant" : "Rien ne correspond") : "Votre bibliothèque est vide"}</h3>
+          <p class="muted">${all.length ? (favs ? "Ouvrez une fiche et ajoutez-la à vos favoris." : "Essayez un autre mot-clé ou une autre catégorie.") : "Déposez une première infographie : Claude la lit, la classe et prépare les fiches que vous choisissez."}</p>
+          ${!all.length && canAdd ? `<button class="btn btn-primary" data-open-upload>Ajouter une infographie</button>` : ""}
+        </div>`}
+    </section>`;
+
+  const dz = $("#dropzone");
+  if (dz && canAdd) bindDropzone(dz);
+  $("#search").addEventListener("input", (e) => {
+    S.search = e.target.value; const p = e.target.selectionStart;
+    renderHome(favs); const i = $("#search"); i.focus(); i.setSelectionRange(p, p);
+  });
+}
+
+function featured(all) {
+  if (!all.length) return "";
+  const pages = Math.ceil(all.length / 3);
+  S.page = Math.min(S.page, pages - 1);
+  const slice = all.slice(S.page * 3, S.page * 3 + 3);
+  const hl = slice.length === 3 ? 1 : 0;
+  return `
+    <section class="section">
+      <div class="section-head">
+        <h2>À la <span class="accent">une</span></h2>
+        ${pages > 1 ? `<div class="pager"><button data-page="-1" ${S.page === 0 ? "disabled" : ""} aria-label="Précédent">‹</button><span>${S.page + 1} / ${pages}</span><button data-page="1" ${S.page === pages - 1 ? "disabled" : ""} aria-label="Suivant">›</button></div>` : ""}
+      </div>
+      <div class="featured">${slice.map((it, i) => `
+        <article class="feature ${i === hl ? "hl" : ""}">
+          <h3>${esc(it.title)}</h3>
+          ${i === hl && it.description ? `<p class="feature-desc">${esc(it.description)}</p>` : ""}
+          <div class="feature-img">
+            <img src="${imgSrc(it)}" alt="" loading="lazy">
+            <span class="pill pill-float">✨ ${doneCount(it)} fiche${doneCount(it) > 1 ? "s" : ""}</span>
+            ${i === hl ? `<div class="feature-tags">${it.level ? `<span class="pill">${esc(it.level)}</span>` : ""}<span class="pill">${esc(it.category || "")}</span>${(it.tags || []).slice(0, 2).map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</div>` : ""}
+          </div>
+          <button class="feature-cta" data-open="${it.id}">Voir la fiche complète <span aria-hidden="true">→</span></button>
+        </article>`).join("")}
+      </div>
+    </section>`;
+}
+
+function card(it) {
+  const n = doneCount(it);
+  const busy = it.status === "analyzing" || Object.keys(S.running).some((k) => k.startsWith(it.id + ":"));
+  return `
+    <button class="card" data-open="${it.id}">
+      <div class="card-img">
+        <img src="${imgSrc(it)}" alt="" loading="lazy">
+        ${busy ? `<span class="badge busy"><span class="spinner sm"></span> En préparation</span>` : ""}
+        ${it.favorite ? `<span class="badge" aria-label="Favori">♥</span>` : ""}
+        <div class="card-meta">
+          ${it.readingMinutes ? `<span>⏱ ${it.readingMinutes} min</span>` : ""}
+          ${it.level ? `<span>🎯 ${esc(it.level)}</span>` : ""}
+          <span>✨ ${n} fiche${n > 1 ? "s" : ""}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <span class="card-cat">${CAT_EMOJI[it.category] || "✨"} ${esc(it.category || "")}</span>
+        <h3>${esc(it.title)}</h3>
+        <span class="link">Voir la fiche</span>
+      </div>
+    </button>`;
+}
+
+// ---------- Fiche ----------
+function renderDetail() {
+  const it = S.items.find((x) => x.id === S.view.id);
+  if (!it) return ($("#app").innerHTML = `<button class="back" data-go="home">← Retour à la bibliothèque</button><div class="empty"><div class="empty-emoji">🤷</div><h3>Fiche introuvable</h3></div>`);
+  const results = S.results[it.id] || {};
+  const runningKeys = ACTIONS.map((a) => a.key).filter((k) => (it.id + ":" + k) in S.running);
+  const tabs = ACTIONS.map((a) => a.key).filter((k) => results[k] || runningKeys.includes(k));
+  let tab = S.tab[it.id];
+  if (!tabs.includes(tab)) tab = tabs[0];
+  const canEdit = !!S.assets;
+
+  $("#app").innerHTML = `
+    <button class="back" data-go="home">← Retour à la bibliothèque</button>
+    <section class="detail">
+      <aside class="side">
+        <button class="detail-img" data-zoom aria-label="Agrandir l'infographie"><img src="${imgSrc(it)}" alt="${esc(it.title)}"><span class="pill pill-float">🔍 Agrandir</span></button>
+        <div class="meta">
+          <div><span>Catégorie</span><strong>${CAT_EMOJI[it.category] || "✨"} ${esc(it.category || "—")}</strong></div>
+          <div><span>Niveau</span><strong>${esc(it.level || "—")}</strong></div>
+          <div><span>Lecture</span><strong>${it.readingMinutes ? it.readingMinutes + " min" : "—"}</strong></div>
+          <div><span>Langue d'origine</span><strong>${esc(it.sourceLanguage || "—")}</strong></div>
+        </div>
+        ${canEdit ? `<div class="side-actions">
+          <button class="btn btn-ghost btn-sm" data-fav>${it.favorite ? "♥ Dans mes favoris" : "♡ Ajouter aux favoris"}</button>
+          <button class="btn btn-ghost btn-sm" data-reanalyze ${it.status === "analyzing" ? "disabled" : ""}>${it.status === "analyzing" ? "Analyse…" : "↻ Ré-analyser"}</button>
+          <button class="btn btn-danger btn-sm ${S.armedDelete ? "armed" : ""}" data-delete>${S.armedDelete ? "Confirmer la suppression" : "Supprimer"}</button>
+        </div>` : ""}
+      </aside>
+      <div style="min-width:0">
+        ${S.editing ? editForm(it) : `
+        <div class="title-row">
+          <h1>${esc(it.title)}</h1>
+          ${canEdit ? `<button class="btn btn-ghost btn-sm" data-edit>Modifier</button>` : ""}
+        </div>
+        ${it.analysisError ? `<p class="alert">${esc(it.analysisError)}</p>` : ""}
+        <p class="lead">${esc(it.description || "")}</p>
+        <div class="tags">${(it.tags || []).map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>`}
+
+        ${S.sample && canEdit ? `<h2 class="h-small">Que voulez-vous en faire ?</h2>
+        <div class="tiles">${ACTIONS.map((a) => {
+          const run = runningKeys.includes(a.key), has = !!results[a.key];
+          return `<button class="tile ${has ? "done" : ""}" style="--tint:var(${a.tint})" data-run="${a.key}" ${run ? "disabled" : ""}>
+            <span class="tile-emoji">${run ? `<span class="spinner"></span>` : a.emoji}</span>
+            <span class="tile-label">${esc(a.label)}</span>
+            <span class="tile-hint">${run ? "En préparation…" : has ? "✓ Prêt · voir la fiche" : esc(a.hint)}</span>
+          </button>`;
+        }).join("")}</div>` : ""}
+
+        ${tabs.length ? `
+          <div class="tabs" role="tablist">${tabs.map((k) => `<button class="tab" role="tab" aria-selected="${k === tab}" data-tab="${k}">${ACTION[k].emoji} ${esc(ACTION[k].label)}</button>`).join("")}</div>
+          <div class="result">${resultView(it, tab, results[tab], runningKeys.includes(tab))}</div>`
+          : `<div class="empty" style="margin-top:24px"><div class="empty-emoji">🥣</div><p class="muted">${canEdit ? "Choisissez une action ci-dessus pour créer une première fiche." : "Aucune fiche pour cette infographie."}</p></div>`}
+      </div>
+    </section>`;
+
+  const frame = $("#redesign-frame");
+  if (frame && results.redesign) frame.srcdoc = results.redesign.content;
+  if (runningKeys.includes(tab)) paintLive(it.id, tab);
+}
+
+function resultView(it, key, r, running) {
+  if (running) return `<div class="thinking"><span class="spinner"></span> Claude lit l'infographie et rédige… (souvent 20 à 60 secondes)</div><article class="prose" id="live-${key}"></article>`;
+  const date = new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const bar = `<div class="result-bar"><span class="muted">Générée le ${date}${r.truncated ? " · réponse coupée car trop longue" : ""}</span><div>
+    ${r.format === "html" ? `<button class="btn btn-ghost btn-sm" data-fullscreen>Plein écran</button>${S.downloads ? `<button class="btn btn-ghost btn-sm" data-download>Télécharger</button>` : ""}`
+      : `<button class="btn btn-ghost btn-sm" data-copy="${key}">Copier</button>`}
+    ${S.sample && S.assets ? `<button class="btn btn-ghost btn-sm" data-run="${key}" data-fresh="1">↻ Régénérer</button>` : ""}
+  </div></div>`;
+  if (r.format === "html") return `${bar}<iframe id="redesign-frame" class="redesign" sandbox title="Infographie refaite en français"></iframe>`;
+  return `${bar}<article class="prose">${md(r.content)}</article>`;
+}
+
+function editForm(it) {
+  return `<form class="edit-form" id="edit-form">
+    <label>Titre<input id="f-title" value="${esc(it.title)}" required></label>
+    <label>Description<textarea id="f-desc" rows="3">${esc(it.description || "")}</textarea></label>
+    <label>Catégorie<select id="f-cat">${CATEGORIES.map((c) => `<option ${c === it.category ? "selected" : ""}>${c}</option>`).join("")}</select></label>
+    <label>Tags (séparés par des virgules)<input id="f-tags" value="${esc((it.tags || []).join(", "))}"></label>
+    <div class="row"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><button class="btn btn-ghost btn-sm" type="button" data-cancel-edit>Annuler</button></div>
+  </form>`;
+}
+
+// ---------- Dépôt ----------
+function bindDropzone(el) {
+  el.addEventListener("click", () => $("#file-input").click());
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#file-input").click(); } });
+  ["dragenter", "dragover"].forEach((t) => el.addEventListener(t, (e) => { e.preventDefault(); el.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => el.addEventListener(t, () => el.classList.remove("over")));
+}
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) openUpload([...e.dataTransfer.files]); });
+document.addEventListener("paste", (e) => {
+  const f = [...(e.clipboardData?.files || [])].filter((x) => x.type.startsWith("image/"));
+  if (f.length) openUpload(f);
+});
+$("#file-input").addEventListener("change", (e) => { openUpload([...e.target.files]); e.target.value = ""; });
+
+function openUpload(list) {
+  if (!S.assets || !S.sample) return toast("L'ajout d'infographies n'est pas disponible dans cette vue.", true);
+  const ok = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+  const bad = list.filter((f) => !ok.includes(f.type) || f.size > 20 * 1024 * 1024);
+  files.pending = list.filter((f) => !bad.includes(f));
+  if (bad.length) toast(`${bad.length} fichier(s) ignoré(s) : format non pris en charge ou plus de 20 Mo.`, true);
+  if (!files.pending.length) return;
+  const urls = files.pending.map((f) => URL.createObjectURL(f));
+  $("#modal-body").innerHTML = `
+    <div class="upload-grid">
+      <div class="previews ${urls.length > 1 ? "multi" : ""}">${urls.map((u) => `<img src="${u}" alt="">`).join("")}</div>
+      <div>
+        <h2>Que voulez-vous en <span class="accent">faire</span> ?</h2>
+        <p class="muted">${urls.length > 1 ? urls.length + " infographies sélectionnées. " : ""}Choisissez une ou plusieurs actions. Vous pourrez en lancer d'autres plus tard depuis la fiche.</p>
+        <div class="choices">${ACTIONS.map((a) => `
+          <label class="choice" style="--tint:var(${a.tint})"><input type="checkbox" id="c-${a.key}" value="${a.key}" ${DEFAULT_ACTIONS.includes(a.key) ? "checked" : ""}>
+          <span class="choice-emoji" aria-hidden="true">${a.emoji}</span><span><strong>${esc(a.label)}</strong><small>${esc(a.hint)}</small></span></label>`).join("")}</div>
+        <button class="btn btn-primary btn-lg" id="start">C'est parti →</button>
+      </div>
+    </div>`;
+  $("#modal").hidden = false;
+  $("#start").addEventListener("click", startUpload);
+}
+
+async function startUpload() {
+  const chosen = [...document.querySelectorAll(".choice input:checked")].map((i) => i.value);
+  const list = files.pending;
+  const steps = list.map((f) => ({ name: f.name, state: "wait", detail: "En attente" }));
+  const draw = () => {
+    $("#modal-body").innerHTML = `
+      <h2>On s'occupe de <span class="accent">tout</span> 🍳</h2>
+      <p class="muted" style="margin:8px 0 0">Claude lit l'infographie, la classe, puis prépare les fiches demandées. Comptez une à deux minutes. Vous pouvez fermer cette fenêtre : le travail continue tant que la page reste ouverte.</p>
+      <ul class="progress">${steps.map((s) => `
+        <li class="${s.state === "ok" ? "ok" : s.state === "ko" ? "ko" : ""}">
+          <span class="p-icon">${s.state === "ok" ? "✓" : s.state === "ko" ? "!" : s.state === "wait" ? "·" : `<span class="spinner"></span>`}</span>
+          <span><strong>${esc(s.title || s.name)}</strong><small>${esc(s.detail)}</small></span>
+        </li>`).join("")}</ul>
+      ${steps.every((s) => s.state === "ok" || s.state === "ko") ? `<div class="modal-actions">
+        ${steps.length === 1 && steps[0].id ? `<button class="btn btn-primary" data-open="${steps[0].id}">Voir la fiche →</button>` : ""}
+        <button class="btn btn-ghost" data-close-modal>Retour à la bibliothèque</button></div>` : ""}`;
+  };
+  draw();
+
+  for (const [i, file] of list.entries()) {
+    const s = steps[i];
+    try {
+      s.state = "run"; s.detail = "Enregistrement de l'image…"; draw();
+      const up = await S.assets.upload(file);
+      const ref = S.db.collection("items").doc();
+      s.id = ref.id;
+      await ref.set({ title: file.name.replace(/\.[^.]+$/, ""), description: "", category: "Autre", tags: [], level: null, readingMinutes: null, sourceLanguage: "", assetId: up.id, createdAt: new Date().toISOString(), favorite: false, status: "analyzing", done: {} });
+      s.detail = "Lecture et classement par Claude…"; draw();
+      try {
+        const meta = await analyze(file);
+        s.title = meta.title;
+        await updateItem(ref.id, { ...meta, status: "ready" });
+      } catch (e) {
+        await updateItem(ref.id, { status: "ready", analysisError: sampleError(e) });
+        throw e;
+      }
+      if (chosen.length) {
+        s.detail = "Préparation : " + chosen.map((k) => ACTION[k].label).join(", ") + "…"; draw();
+        const item = { id: ref.id, assetId: up.id };
+        const res = await Promise.allSettled(chosen.map((k) => runAction(item, k, { blob: file })));
+        const failed = res.filter((r) => r.status === "rejected");
+        if (failed.length) { s.state = "ko"; s.detail = `${failed.length} fiche(s) en échec : ${sampleError(failed[0].reason)}`; draw(); continue; }
+      }
+      s.state = "ok"; s.detail = "Prêt !";
+    } catch (e) {
+      s.state = "ko";
+      s.detail = e?.code && e.code in { too_large: 1, unsupported_type: 1, quota_or_state: 1 } ? "Image refusée par le stockage (trop lourde ou espace plein)." : sampleError(e);
+    }
+    draw();
+  }
+}
+
+// ---------- Clics ----------
+document.addEventListener("click", async (e) => {
+  if (e.target.closest("#lightbox")) return ($("#lightbox").hidden = true);
+  if (e.target.id === "modal") return ($("#modal").hidden = true);
+  const t = e.target.closest("button, [data-open-upload]");
+  if (!t) return;
+  const d = t.dataset;
+  const it = S.view.name === "detail" && S.items.find((x) => x.id === S.view.id);
+  if ("delete" in d === false && S.armedDelete) { S.armedDelete = false; }
+
+  if (d.go) go(d.go);
+  else if (d.open) { $("#modal").hidden = true; go("detail", d.open); }
+  else if ("openUpload" in d) $("#file-input").click();
+  else if ("closeModal" in d) $("#modal").hidden = true;
+  else if (d.filter) { S.filter = d.filter; render(); }
+  else if (d.page) { S.page += Number(d.page); render(); }
+  else if (!it) return;
+  else if (d.run) {
+    if (S.results[it.id]?.[d.run] && !d.fresh) { S.tab[it.id] = d.run; render(); }
+    else runAction(it, d.run, { fresh: !!d.fresh }).catch(() => {});
+  }
+  else if (d.tab) { S.tab[it.id] = d.tab; render(); }
+  else if ("fav" in d) { await updateItem(it.id, { favorite: !it.favorite }).catch(() => toast("Impossible d'enregistrer. Réessayez.", true)); }
+  else if ("edit" in d) { S.editing = true; render(); }
+  else if ("cancelEdit" in d) { S.editing = false; render(); }
+  else if ("zoom" in d) { $("#lightbox img").src = imgSrc(it); $("#lightbox").hidden = false; }
+  else if ("reanalyze" in d) {
+    t.disabled = true; t.textContent = "Analyse…";
+    try { const meta = await analyze(await imageBlob(it)); await updateItem(it.id, { ...meta, analysisError: null }); toast("Fiche mise à jour"); }
+    catch (err) { toast(sampleError(err), true); render(); }
+  }
+  else if ("delete" in d) {
+    if (!S.armedDelete) { S.armedDelete = true; return render(); }
+    S.armedDelete = false;
+    try {
+      for (const k of Object.keys(S.results[it.id] || {})) await S.db.doc(`items/${it.id}/results/${k}`).delete();
+      await S.db.doc("items/" + it.id).delete();
+      if (it.assetId) await S.assets.delete(it.assetId).catch(() => {});
+      go("home"); toast("Infographie supprimée");
+    } catch { toast("La suppression a échoué. Réessayez.", true); }
+  }
+  else if ("copy" in d) {
+    const text = S.results[it.id][d.copy].content;
+    try { await navigator.clipboard.writeText(text); toast("Copié"); }
+    catch { const r = document.createRange(); r.selectNodeContents($(".prose")); getSelection().removeAllRanges(); getSelection().addRange(r); toast("Texte sélectionné : copiez-le avec Ctrl+C"); }
+  }
+  else if ("fullscreen" in d) { $("#redesign-frame")?.requestFullscreen?.().catch(() => toast("Le plein écran n'est pas disponible ici.", true)); }
+  else if ("download" in d) {
+    try { await S.downloads.save({ filename: `${it.title}.html`, data: new Blob([S.results[it.id].redesign.content], { type: "text/html" }) }); }
+    catch (err) { if (err?.code && err.code !== "cancelled" && err.code !== "declined") toast("Le téléchargement n'a pas pu se faire.", true); }
+  }
+});
+
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "edit-form") return;
+  e.preventDefault();
+  const id = S.view.id;
+  try {
+    await updateItem(id, {
+      title: $("#f-title").value.trim() || "Sans titre",
+      description: $("#f-desc").value.trim(),
+      category: $("#f-cat").value,
+      tags: $("#f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
+    });
+    S.editing = false; render(); toast("Fiche enregistrée");
+  } catch { toast("Impossible d'enregistrer. Réessayez.", true); }
+});
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("#modal").hidden = true; $("#lightbox").hidden = true; } });
+
+// ---------- Démarrage ----------
+render();
+(async () => {
+  const use = (n) => (window.claude?.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  [S.db, S.assets, S.sample, S.downloads] = await Promise.all(["db", "assets", "sample", "downloads"].map(use));
+  if (S.sample) {
+    const lim = await S.sample.limits().catch(() => null);
+    if (!lim?.images) S.sample = null;
+  }
+  S.ready = true;
+  if (!S.db) return render();
+  S.db.collection("items").orderBy("createdAt", "desc").onSnapshot(
+    (snap) => {
+      S.items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Ne pas redessiner la fiche pendant qu'on modifie le titre.
+      if (!(S.view.name === "detail" && S.editing)) render();
+    },
+    () => { S.db = null; render(); }
+  );
+  render();
+})();
+</script>

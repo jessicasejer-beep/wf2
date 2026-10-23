@@ -18,7 +18,15 @@ Une bibliothèque visuelle et ludique (façon site de recettes) pour se constitu
 
 Recherche, filtres par catégorie, favoris, compteur de consultations et rubrique « À la une ».
 
-## Démarrage
+## Accès en ligne (recommandé)
+
+**https://claude.ai/artifact/9VpfFyPqA54fkP7116yRud** : lien fixe à mettre en favori.
+Version hébergée sur claude.ai (`artifact/infotheque.html`) : pas de serveur ni de clé API,
+les images et les fiches sont stockées avec la page, et Claude est appelé avec votre compte.
+
+## Version locale (serveur Node)
+
+
 
 Prérequis : Node.js 20.12 ou plus et une clé API Anthropic.
 
