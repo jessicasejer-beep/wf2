@@ -227,9 +227,8 @@ main.wrap { padding-block: 0 72px; }
 .toast.error { background: var(--danger); color: var(--on-accent); }
 
 @media (max-width: 900px) {
-  .hero, .detail, .upload-grid, .featured { grid-template-columns: 1fr; }
+  .hero, .detail, .upload-grid { grid-template-columns: 1fr; }
   .side { position: static; }
-  .featured .feature:not(.hl) { display: none; }
 }
 @media (max-width: 560px) {
   .nav button { padding: 8px; font-size: 14px; }
@@ -462,8 +461,7 @@ function renderHome(favs) {
           ${canAdd ? `<span class="btn btn-primary">Choisir des fichiers</span>` : ""}
         </div>
       </div>
-    </section>
-    ${featured(all)}`}
+    </section>`}
     <section class="section" id="library">
       <div class="section-head">
         <div>
@@ -488,33 +486,6 @@ function renderHome(favs) {
     S.search = e.target.value; const p = e.target.selectionStart;
     renderHome(favs); const i = $("#search"); i.focus(); i.setSelectionRange(p, p);
   });
-}
-
-function featured(all) {
-  if (!all.length) return "";
-  const pages = Math.ceil(all.length / 3);
-  S.page = Math.min(S.page, pages - 1);
-  const slice = all.slice(S.page * 3, S.page * 3 + 3);
-  const hl = slice.length === 3 ? 1 : 0;
-  return `
-    <section class="section">
-      <div class="section-head">
-        <h2>À la <span class="accent">une</span></h2>
-        ${pages > 1 ? `<div class="pager"><button data-page="-1" ${S.page === 0 ? "disabled" : ""} aria-label="Précédent">‹</button><span>${S.page + 1} / ${pages}</span><button data-page="1" ${S.page === pages - 1 ? "disabled" : ""} aria-label="Suivant">›</button></div>` : ""}
-      </div>
-      <div class="featured">${slice.map((it, i) => `
-        <article class="feature ${i === hl ? "hl" : ""}">
-          <h3>${esc(it.title)}</h3>
-          ${i === hl && it.description ? `<p class="feature-desc">${esc(it.description)}</p>` : ""}
-          <div class="feature-img">
-            <img src="${imgSrc(it)}" alt="" loading="lazy">
-            <span class="pill pill-float">✨ ${doneCount(it)} fiche${doneCount(it) > 1 ? "s" : ""}</span>
-            ${i === hl ? `<div class="feature-tags">${it.level ? `<span class="pill">${esc(it.level)}</span>` : ""}<span class="pill">${esc(it.category || "")}</span>${(it.tags || []).slice(0, 2).map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</div>` : ""}
-          </div>
-          <button class="feature-cta" data-open="${it.id}">Voir la fiche complète <span aria-hidden="true">→</span></button>
-        </article>`).join("")}
-      </div>
-    </section>`;
 }
 
 function card(it) {
@@ -728,7 +699,6 @@ document.addEventListener("click", async (e) => {
   else if ("openUpload" in d) $("#file-input").click();
   else if ("closeModal" in d) $("#modal").hidden = true;
   else if (d.filter) { S.filter = d.filter; render(); }
-  else if (d.page) { S.page += Number(d.page); render(); }
   else if (!it) return;
   else if (d.run) {
     if (S.results[it.id]?.[d.run] && !d.fresh) { S.tab[it.id] = d.run; render(); }
