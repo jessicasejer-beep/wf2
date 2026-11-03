@@ -18,7 +18,7 @@
     --warn: #FFE66D; --warn-soft: #FFF6C7; --low-text: #6E5A00;
     --ok: #4ECDC4; --ok-soft: #DCF5F2; --ok-ink: #1B7F78;
     --medium-soft: #E4E8EC; --medium-ink: #292F36;
-    --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4;
+    --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4; --col-blocked: #FF6B6B;
     --radius: 12px;
     color-scheme: light;
   }
@@ -100,7 +100,7 @@
   .stat.danger .v { color: var(--danger-ink); }
 
   /* ---------- Board ---------- */
-  .board { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(280px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
+  .board { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(260px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
   .column { background: var(--column); border-radius: 14px; display: flex; flex-direction: column; min-height: 0; }
   .col-head { padding: 14px 14px 10px; }
   .col-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
@@ -123,7 +123,9 @@
   }
   .card.placeholder-before::before { top: -8px; }
   .card.placeholder-after::after { bottom: -8px; }
-  .card-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card-top { display: flex; align-items: center; gap: 6px; }
+  .card-top .pill { flex: none; }
+  .card-top .proj-pill { flex: 0 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card-top .icon-btn { margin-left: auto; }
   .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
   .pill.low { background: var(--warn-soft); color: var(--low-text); }
@@ -140,6 +142,8 @@
   .card-foot .meta { display: inline-flex; align-items: center; gap: 4px; }
   .card-foot .meta.overdue { color: var(--danger-ink); font-weight: 600; }
   .card-foot .meta.soon { color: var(--low-text); font-weight: 600; }
+  .blocked-note { display: flex; gap: 6px; align-items: flex-start; margin-top: 10px; padding: 7px 9px; border-radius: 8px; background: var(--danger-soft); color: var(--danger-ink); font-size: 12.5px; line-height: 1.4; white-space: pre-wrap; }
+  .blocked-note svg { margin-top: 1px; }
   .mini-progress { flex: 1; min-width: 50px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
   .mini-progress span { display: block; height: 100%; background: var(--ok); }
 
@@ -197,7 +201,7 @@
     .topbar h1 { font-size: 17px; }
     .main { overflow-x: hidden; }
     .stats { padding: 0 16px 12px; }
-    .board { padding: 0 16px 16px; grid-template-columns: repeat(3, minmax(270px, 85vw)); }
+    .board { padding: 0 16px 16px; grid-template-columns: repeat(4, minmax(270px, 85vw)); }
     .search { min-width: 0; flex: 1 1 160px; }
     .row { grid-template-columns: 1fr; }
   }
@@ -268,6 +272,7 @@
   const COLUMNS = [
     { id: 'todo', label: 'À faire', color: 'var(--col-todo)' },
     { id: 'progress', label: 'En cours', color: 'var(--col-progress)' },
+    { id: 'blocked', label: 'Bloqué', color: 'var(--col-blocked)' },
     { id: 'done', label: 'Terminé', color: 'var(--col-done)' },
   ];
   const PRIORITIES = { high: 'Haute', medium: 'Moyenne', low: 'Basse' };
@@ -414,6 +419,7 @@
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>',
     arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    block: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
     filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16l-6 8v6l-4-2v-4L4 5Z"/></svg>',
   };
 
@@ -505,11 +511,13 @@
     const done = scope.filter(t => t.status === 'done').length;
     const overdue = scope.filter(t => t.dueDate && t.dueDate < todayISO() && t.status !== 'done').length;
     const high = scope.filter(t => t.priority === 'high' && t.status !== 'done').length;
+    const blocked = scope.filter(t => t.status === 'blocked').length;
     const pct = scope.length ? Math.round(done / scope.length * 100) : 0;
     $('#stats').innerHTML = `
       <div class="stat"><div class="v">${scope.length}</div><div class="l">Tâches</div></div>
       <div class="stat"><div class="v">${pct}%</div><div class="l">Avancement (${done} terminées)</div></div>
       <div class="stat ${high ? 'danger' : ''}"><div class="v">${high}</div><div class="l">Priorité haute en cours</div></div>
+      <div class="stat ${blocked ? 'danger' : ''}"><div class="v">${blocked}</div><div class="l">Bloquées</div></div>
       <div class="stat ${overdue ? 'danger' : ''}" ${overdue ? 'style="cursor:pointer" data-show-overdue title="Afficher les tâches en retard"' : ''}><div class="v">${overdue}</div><div class="l">En retard</div></div>`;
   }
 
@@ -529,6 +537,7 @@
       </div>
       <h3>${esc(task.title)}</h3>
       ${task.description ? `<p>${esc(task.description)}</p>` : ''}
+      ${task.status === 'blocked' && task.blockedReason ? `<div class="blocked-note">${ICONS.block}<span>${esc(task.blockedReason)}</span></div>` : ''}
       ${task.tags?.length ? `<div class="tags">${task.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
       ${(due || cl.length) ? `<div class="card-foot">
         ${due ? `<span class="meta ${due.cls}">${ICONS.cal}${esc(due.label)}</span>` : ''}
@@ -695,6 +704,7 @@
           <div class="field"><label for="tDue">Échéance</label><input type="date" id="tDue" value="${t.dueDate || ''}"></div>
         </div>
         <div class="field"><label>Statut</label><div class="seg" id="statusSeg">${statusSeg}</div></div>
+        <div class="field" id="blockedField" ${t.status === 'blocked' ? '' : 'hidden'}><label for="tBlocked">Motif du blocage</label><input type="text" id="tBlocked" maxlength="200" placeholder="En attente de validation client, accès manquant…" value="${esc(t.blockedReason || '')}"></div>
         <div class="field"><label>Priorité</label><div class="seg" id="prioSeg">${prioSeg}</div></div>
         <div class="field"><label for="tDesc">Description</label><textarea id="tDesc" rows="3" placeholder="Détails, liens, notes…">${esc(t.description)}</textarea></div>
         <div class="field"><label for="tTags">Étiquettes</label><input type="text" id="tTags" placeholder="design, urgent, client… (séparées par des virgules)" value="${esc((t.tags || []).join(', '))}"></div>
@@ -716,7 +726,7 @@
         set(b.dataset[attr]);
         $(sel, modal).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
       });
-      segHandler('#statusSeg', 'status', v => status = v);
+      segHandler('#statusSeg', 'status', v => { status = v; $('#blockedField', modal).hidden = v !== 'blocked'; });
       segHandler('#prioSeg', 'prio', v => priority = v);
 
       const drawChecklist = () => {
@@ -750,6 +760,7 @@
           title, status, priority,
           projectId: $('#tProject', modal).value,
           dueDate: $('#tDue', modal).value,
+          blockedReason: status === 'blocked' ? $('#tBlocked', modal).value.trim() : '',
           description: $('#tDesc', modal).value.trim(),
           tags: $('#tTags', modal).value.split(',').map(s => s.trim().replace(/^#/, '')).filter(Boolean),
           checklist: checklist.filter(c => c.text.trim()),
