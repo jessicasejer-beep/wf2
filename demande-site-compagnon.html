@@ -1,0 +1,272 @@
+<title>Demande site compagnon</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout : formulaire à gauche, message prêt à copier à droite ; une colonne sur mobile */
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --fg: #1b2230;
+    --muted: #5d6676;
+    --line: #d9dde4;
+    --accent: #1f4fa8;
+    --accent-fg: #ffffff;
+    --ok: #1d7a4a;
+    --field: #ffffff;
+    --code-bg: #eef1f6;
+    --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161d; --surface: #1a2029; --fg: #e5e9ef; --muted: #9aa3b2; --line: #2e3643;
+      --accent: #7aa5f0; --accent-fg: #0c1422; --ok: #5fcf93; --field: #141920; --code-bg: #10141a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161d; --surface: #1a2029; --fg: #e5e9ef; --muted: #9aa3b2; --line: #2e3643;
+    --accent: #7aa5f0; --accent-fg: #0c1422; --ok: #5fcf93; --field: #141920; --code-bg: #10141a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 40px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+  header h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+  .panel h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+  .field { display: grid; gap: 6px; min-width: 0; }
+  label, .legend { font-weight: 500; font-size: 14px; }
+  .hint { font-size: 12.5px; color: var(--muted); }
+  input[type="text"], input[type="url"], textarea {
+    width: 100%; box-sizing: border-box; font: inherit; color: var(--fg); background: var(--field);
+    border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible, .seg input:focus-visible + span {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .prefixed { display: flex; align-items: stretch; }
+  .prefixed span {
+    font-family: var(--font-mono); font-size: 14px; display: flex; align-items: center; padding: 0 10px;
+    border: 1px solid var(--line); border-right: 0; border-radius: 7px 0 0 7px; background: var(--code-bg); color: var(--muted);
+  }
+  .prefixed input { border-radius: 0 7px 7px 0; font-family: var(--font-mono); font-size: 14px; }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 8px; }
+  .seg label { position: relative; cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .seg span { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; background: var(--field); }
+  .seg input:checked + span { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13.5px; color: var(--muted); font-weight: 400; }
+
+  .err { color: #c0392b; font-size: 12.5px; }
+  :root[data-theme="dark"] .err { color: #f08a7e; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .err { color: #f08a7e; } }
+
+  pre#output {
+    margin: 0; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6; background: var(--code-bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 16px; white-space: pre-wrap; word-break: break-word; min-height: 220px;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button {
+    font: inherit; font-weight: 500; border-radius: 7px; padding: 9px 16px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+  }
+  button.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+  #status { font-size: 13.5px; color: var(--ok); }
+  @media (prefers-reduced-motion: no-preference) { button { transition: filter .15s; } button:hover { filter: brightness(1.08); } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Demande de site compagnon</h1>
+    <p>Remplissez les champs : le message se met à jour à droite, prêt à copier.</p>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="form" autocomplete="off">
+      <h2>Informations du site</h2>
+
+      <div class="field">
+        <span class="legend">Type de site</span>
+        <div class="seg" role="radiogroup" aria-label="Type de site">
+          <label><input type="radio" name="type" id="type-ens" value="enseignant" checked><span>enseignant</span></label>
+          <label><input type="radio" name="type" id="type-eleve" value="élève"><span>élève</span></label>
+          <label><input type="radio" name="type" id="type-mixte" value="enseignant et élève"><span>enseignant et élève</span></label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="marque">Marque</label>
+          <input type="text" id="marque" list="marques" value="Nathan">
+          <datalist id="marques">
+            <option value="Nathan"><option value="Bordas"><option value="Retz"><option value="Le Robert">
+            <option value="Clé International"><option value="Dunod"><option value="Pocket Jeunesse">
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="niveau">Niveau</label>
+          <input type="text" id="niveau" list="niveaux" value="primaire">
+          <datalist id="niveaux">
+            <option value="maternelle"><option value="primaire"><option value="collège"><option value="lycée">
+            <option value="lycée pro"><option value="supérieur"><option value="parascolaire">
+          </datalist>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="titre">Titre de l'ouvrage</label>
+        <textarea id="titre" rows="2">Les clés de l'EPS à l'école maternelle - PS MS GS - Les projections et réceptions</textarea>
+        <span class="hint">Le libellé est construit ainsi : Titre | Site Compagnon | Éditions Marque</span>
+      </div>
+
+      <div class="field">
+        <label class="check" for="libelle-manuel"><input type="checkbox" id="libelle-manuel"> Saisir le libellé à la main</label>
+        <textarea id="libelle" rows="2" hidden aria-label="Libellé du site"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="url">URL du site</label>
+        <input type="text" id="url" value="https://cles-eps.nathan.fr" inputmode="url" spellcheck="false">
+        <span class="hint">« https:// » est ajouté si vous l'oubliez.</span>
+      </div>
+
+      <div class="field">
+        <label for="code">Code site</label>
+        <div class="prefixed"><span>WF_</span><input type="text" id="code" value="96220" inputmode="numeric" spellcheck="false"></div>
+        <span class="err" id="code-err" hidden>Le code doit contenir uniquement des chiffres (ex. 96220).</span>
+      </div>
+    </form>
+
+    <section class="panel" aria-labelledby="out-title">
+      <h2 id="out-title">Message à envoyer</h2>
+      <pre id="output" aria-live="polite"></pre>
+      <div class="actions">
+        <button type="button" id="copy">Copier le message</button>
+        <button type="button" class="ghost" id="reset">Vider le formulaire</button>
+        <span id="status" role="status"></span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const fields = ["marque", "niveau", "titre", "libelle", "url", "code"];
+  const KEY = "demande-site-compagnon:v1";
+
+  function clean(s) { return (s || "").replace(/\s+/g, " ").trim(); }
+
+  function normUrl(u) {
+    u = clean(u).replace(/\/+$/, "");
+    if (!u) return "";
+    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    return u;
+  }
+
+  function normCode(c) {
+    c = clean(c).replace(/^WF_?/i, "");
+    return c;
+  }
+
+  function autoLibelle() {
+    const titre = clean($("titre").value);
+    const marque = clean($("marque").value);
+    if (!titre) return "";
+    return titre + " | Site Compagnon | Éditions " + marque;
+  }
+
+  function build() {
+    const type = document.querySelector('input[name="type"]:checked').value;
+    const marque = clean($("marque").value);
+    const niveau = clean($("niveau").value);
+    const manuel = $("libelle-manuel").checked;
+    const libelle = manuel ? clean($("libelle").value) : autoLibelle();
+    const url = normUrl($("url").value);
+    const code = normCode($("code").value);
+
+    $("code-err").hidden = !code || /^\d+$/.test(code);
+
+    const lines = [
+      "Bonjour",
+      "Demande de création de site*" + type + "* pour " + [marque, niveau].filter(Boolean).join(" "),
+      "Pouvez-vous créer le sous-domaine et le brancher aux webservices SVP ?",
+      "merci d'avance",
+      "",
+      "LIBELLE_SITE¤URL_SITE¤CODE_SITE",
+      (libelle || "[libellé]") + "¤" + (url || "[url]") + "¤WF_" + (code || "[code]")
+    ];
+    $("output").textContent = lines.join("\n");
+    save();
+  }
+
+  function save() {
+    try {
+      const data = { type: document.querySelector('input[name="type"]:checked').id, manuel: $("libelle-manuel").checked };
+      fields.forEach((f) => (data[f] = $(f).value));
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (!data) return;
+      fields.forEach((f) => { if (typeof data[f] === "string") $(f).value = data[f]; });
+      if (data.type && $(data.type)) $(data.type).checked = true;
+      $("libelle-manuel").checked = !!data.manuel;
+    } catch (e) {}
+  }
+
+  function syncManuel() {
+    const on = $("libelle-manuel").checked;
+    $("libelle").hidden = !on;
+    if (on && !clean($("libelle").value)) $("libelle").value = autoLibelle();
+  }
+
+  $("form").addEventListener("input", build);
+  $("form").addEventListener("submit", (e) => e.preventDefault());
+  $("libelle-manuel").addEventListener("change", () => { syncManuel(); build(); });
+
+  $("copy").addEventListener("click", () => {
+    const text = $("output").textContent;
+    const done = () => { $("status").textContent = "Message copié"; setTimeout(() => ($("status").textContent = ""), 2500); };
+    const fallback = () => {
+      const r = document.createRange(); r.selectNodeContents($("output"));
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      $("status").textContent = "Texte sélectionné : faites Ctrl+C";
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  $("reset").addEventListener("click", () => {
+    ["titre", "libelle", "url", "code"].forEach((f) => ($(f).value = ""));
+    $("libelle-manuel").checked = false;
+    syncManuel(); build(); $("titre").focus();
+  });
+
+  load(); syncManuel(); build();
+})();
+</script>
