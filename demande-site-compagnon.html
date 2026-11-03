@@ -131,8 +131,8 @@
 
       <div class="field">
         <label for="url">URL du site</label>
-        <input type="text" id="url" value="https://cles-eps.nathan.fr" inputmode="url" spellcheck="false">
-        <span class="hint">« https:// » est ajouté si vous l'oubliez.</span>
+        <div class="prefixed"><span>https://</span><input type="text" id="url" value="cles-eps.nathan.fr" inputmode="url" spellcheck="false"></div>
+        <span class="hint">Tapez seulement le domaine, par exemple cles-eps.nathan.fr</span>
       </div>
 
       <div class="field">
@@ -163,11 +163,11 @@
 
   function clean(s) { return (s || "").replace(/\s+/g, " ").trim(); }
 
+  function stripScheme(u) { return clean(u).replace(/^https?:\/\//i, ""); }
+
   function normUrl(u) {
-    u = clean(u).replace(/\/+$/, "");
-    if (!u) return "";
-    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
-    return u;
+    u = stripScheme(u).replace(/\/+$/, "");
+    return u ? "https://" + u : "";
   }
 
   function normCode(c) {
@@ -217,6 +217,7 @@
       const data = JSON.parse(localStorage.getItem(KEY) || "null");
       if (!data) return;
       fields.forEach((f) => { if (typeof data[f] === "string") $(f).value = data[f]; });
+      $("url").value = stripScheme($("url").value);
       if (data.marque && $(data.marque)) $(data.marque).checked = true;
       $("libelle-manuel").checked = !!data.manuel;
     } catch (e) {}
