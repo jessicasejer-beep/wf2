@@ -105,14 +105,6 @@
     <form class="panel" id="form" autocomplete="off">
       <h2>Informations du site</h2>
 
-      <div class="field">
-        <span class="legend">Type de site</span>
-        <div class="seg" role="radiogroup" aria-label="Type de site">
-          <label><input type="radio" name="type" id="type-ens" value="enseignant" checked><span>enseignant</span></label>
-          <label><input type="radio" name="type" id="type-eleve" value="élève"><span>élève</span></label>
-          <label><input type="radio" name="type" id="type-mixte" value="enseignant et élève"><span>enseignant et élève</span></label>
-        </div>
-      </div>
 
       <div class="field">
         <span class="legend">Marque</span>
@@ -191,7 +183,6 @@
   }
 
   function build() {
-    const type = document.querySelector('input[name="type"]:checked').value;
     const marque = marqueVal();
     const manuel = $("libelle-manuel").checked;
     const libelle = manuel ? clean($("libelle").value) : autoLibelle();
@@ -202,7 +193,7 @@
 
     const lines = [
       "Bonjour",
-      "Demande de création de site*" + type + "* pour " + marque,
+      "Demande de création de site*enseignant* pour " + marque,
       "Pouvez-vous créer le sous-domaine et le brancher aux webservices SVP ?",
       "merci d'avance",
       "",
@@ -215,7 +206,7 @@
 
   function save() {
     try {
-      const data = { type: document.querySelector('input[name="type"]:checked').id, marque: document.querySelector('input[name="marque"]:checked').id, manuel: $("libelle-manuel").checked };
+      const data = { marque: document.querySelector('input[name="marque"]:checked').id, manuel: $("libelle-manuel").checked };
       fields.forEach((f) => (data[f] = $(f).value));
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch (e) {}
@@ -226,7 +217,6 @@
       const data = JSON.parse(localStorage.getItem(KEY) || "null");
       if (!data) return;
       fields.forEach((f) => { if (typeof data[f] === "string") $(f).value = data[f]; });
-      if (data.type && $(data.type)) $(data.type).checked = true;
       if (data.marque && $(data.marque)) $(data.marque).checked = true;
       $("libelle-manuel").checked = !!data.manuel;
     } catch (e) {}
