@@ -114,22 +114,15 @@
         </div>
       </div>
 
-      <div class="row">
-        <div class="field">
-          <label for="marque">Marque</label>
-          <input type="text" id="marque" list="marques" value="Nathan">
-          <datalist id="marques">
-            <option value="Nathan"><option value="Bordas"><option value="Retz"><option value="Le Robert">
-            <option value="Clé International"><option value="Dunod"><option value="Pocket Jeunesse">
-          </datalist>
-        </div>
-        <div class="field">
-          <label for="niveau">Niveau</label>
-          <input type="text" id="niveau" list="niveaux" value="primaire">
-          <datalist id="niveaux">
-            <option value="maternelle"><option value="primaire"><option value="collège"><option value="lycée">
-            <option value="lycée pro"><option value="supérieur"><option value="parascolaire">
-          </datalist>
+      <div class="field">
+        <span class="legend">Marque</span>
+        <div class="seg" role="radiogroup" aria-label="Marque">
+          <label><input type="radio" name="marque" id="m-nathan" value="Nathan" checked><span>Nathan</span></label>
+          <label><input type="radio" name="marque" id="m-bordas" value="Bordas"><span>Bordas</span></label>
+          <label><input type="radio" name="marque" id="m-cle" value="CLE International"><span>CLE International</span></label>
+          <label><input type="radio" name="marque" id="m-mdi" value="MDI"><span>MDI</span></label>
+          <label><input type="radio" name="marque" id="m-retz" value="RETZ"><span>RETZ</span></label>
+          <label><input type="radio" name="marque" id="m-robert" value="LE ROBERT"><span>LE ROBERT</span></label>
         </div>
       </div>
 
@@ -172,8 +165,9 @@
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
-  const fields = ["marque", "niveau", "titre", "libelle", "url", "code"];
-  const KEY = "demande-site-compagnon:v1";
+  const fields = ["titre", "libelle", "url", "code"];
+  const KEY = "demande-site-compagnon:v2";
+  const marqueVal = () => document.querySelector('input[name="marque"]:checked').value;
 
   function clean(s) { return (s || "").replace(/\s+/g, " ").trim(); }
 
@@ -191,15 +185,14 @@
 
   function autoLibelle() {
     const titre = clean($("titre").value);
-    const marque = clean($("marque").value);
+    const marque = marqueVal();
     if (!titre) return "";
     return titre + " | Site Compagnon | Éditions " + marque;
   }
 
   function build() {
     const type = document.querySelector('input[name="type"]:checked').value;
-    const marque = clean($("marque").value);
-    const niveau = clean($("niveau").value);
+    const marque = marqueVal();
     const manuel = $("libelle-manuel").checked;
     const libelle = manuel ? clean($("libelle").value) : autoLibelle();
     const url = normUrl($("url").value);
@@ -209,7 +202,7 @@
 
     const lines = [
       "Bonjour",
-      "Demande de création de site*" + type + "* pour " + [marque, niveau].filter(Boolean).join(" "),
+      "Demande de création de site*" + type + "* pour " + marque,
       "Pouvez-vous créer le sous-domaine et le brancher aux webservices SVP ?",
       "merci d'avance",
       "",
@@ -222,7 +215,7 @@
 
   function save() {
     try {
-      const data = { type: document.querySelector('input[name="type"]:checked').id, manuel: $("libelle-manuel").checked };
+      const data = { type: document.querySelector('input[name="type"]:checked').id, marque: document.querySelector('input[name="marque"]:checked').id, manuel: $("libelle-manuel").checked };
       fields.forEach((f) => (data[f] = $(f).value));
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch (e) {}
@@ -234,6 +227,7 @@
       if (!data) return;
       fields.forEach((f) => { if (typeof data[f] === "string") $(f).value = data[f]; });
       if (data.type && $(data.type)) $(data.type).checked = true;
+      if (data.marque && $(data.marque)) $(data.marque).checked = true;
       $("libelle-manuel").checked = !!data.manuel;
     } catch (e) {}
   }
