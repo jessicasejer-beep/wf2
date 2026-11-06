@@ -18,7 +18,7 @@
     --warn: #FFE66D; --warn-soft: #FFF6C7; --low-text: #6E5A00;
     --ok: #4ECDC4; --ok-soft: #DCF5F2; --ok-ink: #1B7F78;
     --medium-soft: #E4E8EC; --medium-ink: #292F36;
-    --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4; --col-blocked: #FF6B6B;
+    --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4; --col-blocked: #FF6B6B; --col-preprod: #7BDFF2; --col-prod: #1A9E96;
     --radius: 12px;
     color-scheme: light;
   }
@@ -100,7 +100,7 @@
   .stat.danger .v { color: var(--danger-ink); }
 
   /* ---------- Board ---------- */
-  .board { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(260px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
+  .board { flex: 1; display: grid; grid-template-columns: repeat(6, minmax(230px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
   .column { background: var(--column); border-radius: 14px; display: flex; flex-direction: column; min-height: 0; }
   .col-head { padding: 14px 14px 10px; }
   .col-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
@@ -123,10 +123,9 @@
   }
   .card.placeholder-before::before { top: -8px; }
   .card.placeholder-after::after { bottom: -8px; }
-  .card-top { display: flex; align-items: center; gap: 6px; }
-  .card-top .pill { flex: none; }
-  .card-top .proj-pill { flex: 0 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .card-top .icon-btn { margin-left: auto; }
+  .card-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-right: 28px; min-height: 22px; }
+  .card-top .proj-pill { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .card-top .icon-btn { position: absolute; top: 10px; right: 8px; }
   .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
   .pill.low { background: var(--warn-soft); color: var(--low-text); }
   .pill.medium { background: var(--medium-soft); color: var(--medium-ink); }
@@ -146,6 +145,24 @@
   .blocked-note svg { margin-top: 1px; }
   .mini-progress { flex: 1; min-width: 50px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
   .mini-progress span { display: block; height: 100%; background: var(--ok); }
+
+  /* ---------- Archives ---------- */
+  .board.archive-view { display: block; }
+  .archive-item { margin-top: 10px; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; padding-top: 12px; }
+  .archive-item .dot { display: grid; place-items: center; background: none; color: var(--muted); }
+  .arch-wrap { background: var(--column); border-radius: 14px; padding: 16px; max-width: 980px; }
+  .arch-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .arch-head h2 { margin: 0; font-size: 16px; }
+  .arch-head .badge { background: var(--surface); color: var(--muted); border-radius: 20px; padding: 1px 8px; font-size: 12px; }
+  .arch-list { display: grid; gap: 8px; }
+  .arch-row { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow); border-left: 4px solid var(--pc); cursor: pointer; }
+  .arch-row:hover { box-shadow: var(--shadow-lg); }
+  .arch-main { flex: 1; min-width: 0; }
+  .arch-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .arch-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; color: var(--muted); font-size: 12px; }
+  .arch-meta .proj-pill { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+  .status-dot { display: inline-flex; align-items: center; gap: 5px; }
+  .status-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
 
   /* ---------- Menu ---------- */
   .menu {
@@ -201,7 +218,7 @@
     .topbar h1 { font-size: 17px; }
     .main { overflow-x: hidden; }
     .stats { padding: 0 16px 12px; }
-    .board { padding: 0 16px 16px; grid-template-columns: repeat(4, minmax(270px, 85vw)); }
+    .board { padding: 0 16px 16px; grid-template-columns: repeat(6, minmax(270px, 85vw)); }
     .search { min-width: 0; flex: 1 1 160px; }
     .row { grid-template-columns: 1fr; }
   }
@@ -273,6 +290,8 @@
     { id: 'todo', label: 'À faire', color: 'var(--col-todo)' },
     { id: 'progress', label: 'En cours', color: 'var(--col-progress)' },
     { id: 'blocked', label: 'Bloqué', color: 'var(--col-blocked)' },
+    { id: 'preprod', label: 'En preprod', color: 'var(--col-preprod)' },
+    { id: 'prod', label: 'En production', color: 'var(--col-prod)' },
     { id: 'done', label: 'Terminé', color: 'var(--col-done)' },
   ];
   const PRIORITIES = { high: 'Haute', medium: 'Moyenne', low: 'Basse' };
@@ -330,8 +349,10 @@
   }
 
   const ui = {
-    projectFilter: new Set(), search: '', priority: '', due: '', sort: 'manual',
+    projectFilter: new Set(), search: '', priority: '', due: '', sort: 'manual', view: 'board',
   };
+  const liveTasks = () => state.tasks.filter(t => !t.archived);
+  const statusOf = (id) => COLUMNS.find(c => c.id === id) || COLUMNS[0];
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY + '-ui') || '{}');
     if (saved.projectFilter) ui.projectFilter = new Set(saved.projectFilter);
@@ -420,6 +441,8 @@
     arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     block: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+    archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg>',
+    restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg>',
     filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16l-6 8v6l-4-2v-4L4 5Z"/></svg>',
   };
 
@@ -472,12 +495,12 @@
 
   function renderSidebar() {
     const list = $('#projectList');
-    const total = state.tasks.length;
+    const total = liveTasks().length;
     let html = `<div class="project-item all-item ${ui.projectFilter.size === 0 ? 'active' : ''}" data-all>
       <span class="dot" style="background: conic-gradient(${state.projects.map((p, i, a) => `${p.color} ${i / a.length * 100}% ${(i + 1) / a.length * 100}%`).join(',') || 'var(--muted) 0 100%'})"></span>
       <span class="name">Tous les projets</span><span class="count">${total}</span></div>`;
     for (const p of state.projects) {
-      const tasks = state.tasks.filter(t => t.projectId === p.id);
+      const tasks = liveTasks().filter(t => t.projectId === p.id);
       const done = tasks.filter(t => t.status === 'done').length;
       const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
       html += `<div class="project-item ${ui.projectFilter.has(p.id) ? 'active' : ''}" data-project="${p.id}" title="${esc(p.description || p.name)} — Ctrl/⌘+clic pour sélection multiple">
@@ -489,6 +512,9 @@
       </div>`;
     }
     if (!state.projects.length && mode !== 'loading') html += `<div class="empty" style="margin-top:8px">Aucun projet.<br><button class="btn small primary" style="margin-top:8px" data-new-project>Créer un projet</button></div>`;
+    const archived = state.tasks.filter(t => t.archived && (!ui.projectFilter.size || ui.projectFilter.has(t.projectId))).length;
+    html += `<div class="project-item archive-item ${ui.view === 'archives' ? 'active' : ''}" data-archives title="Tâches archivées">
+      <span class="dot">${ICONS.archive}</span><span class="name">Archives</span><span class="count" style="display:inline">${archived}</span></div>`;
     list.innerHTML = html;
   }
 
@@ -500,6 +526,7 @@
     } else if (ui.projectFilter.size > 1) {
       title.textContent = `${ui.projectFilter.size} projets sélectionnés`;
     } else title.textContent = 'Tous les projets';
+    if (ui.view === 'archives') title.insertAdjacentHTML('afterbegin', '<span style="color:var(--muted);font-weight:500">Archives ·</span> ');
     $('#priorityFilter').value = ui.priority;
     $('#dueFilter').value = ui.due;
     $('#sortSelect').value = ui.sort;
@@ -507,7 +534,8 @@
   }
 
   function renderStats() {
-    const scope = state.tasks.filter(t => !ui.projectFilter.size || ui.projectFilter.has(t.projectId));
+    $('#stats').hidden = ui.view === 'archives';
+    const scope = liveTasks().filter(t => !ui.projectFilter.size || ui.projectFilter.has(t.projectId));
     const done = scope.filter(t => t.status === 'done').length;
     const overdue = scope.filter(t => t.dueDate && t.dueDate < todayISO() && t.status !== 'done').length;
     const high = scope.filter(t => t.priority === 'high' && t.status !== 'done').length;
@@ -546,14 +574,38 @@
     </article>`;
   }
 
+  function renderArchives() {
+    const board = $('#board');
+    const tasks = state.tasks.filter(t => t.archived && matchesFilters(t)).sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+    board.innerHTML = `<div class="arch-wrap">
+      <div class="arch-head"><h2>Tâches archivées</h2><span class="badge">${tasks.length}</span><div class="spacer"></div>
+        <button class="btn small" data-back>Retour au tableau</button></div>
+      <div class="arch-list">${tasks.map(t => {
+        const p = projectById(t.projectId) || { name: '—', color: '#64748b' };
+        const st = statusOf(t.status);
+        return `<div class="arch-row" data-open-task="${t.id}" style="--pc:${p.color}">
+          <div class="arch-main"><div class="arch-title">${esc(t.title)}</div>
+            <div class="arch-meta"><span class="pill proj-pill">${esc(p.name)}</span>
+              <span class="status-dot" style="--sc:${st.color}">${st.label}</span>
+              ${t.archivedAt ? `<span>Archivée le ${new Date(t.archivedAt).toLocaleDateString('fr-FR')}</span>` : ''}</div></div>
+          <button class="btn small" data-restore="${t.id}" title="Remettre dans le tableau">${ICONS.restore}Restaurer</button>
+          <button class="icon-btn" data-delete-task="${t.id}" title="Supprimer définitivement">${ICONS.trash}</button>
+        </div>`;
+      }).join('') || `<div class="empty">Aucune tâche archivée. Utilisez « ⋯ › Archiver » sur une carte pour la ranger ici.</div>`}</div>
+    </div>`;
+  }
+
   function renderBoard() {
     const board = $('#board');
+    board.classList.toggle('archive-view', ui.view === 'archives');
+    if (ui.view === 'archives') return renderArchives();
     board.innerHTML = COLUMNS.map(col => {
-      const tasks = sortTasks(state.tasks.filter(t => t.status === col.id && matchesFilters(t)));
+      const tasks = sortTasks(liveTasks().filter(t => t.status === col.id && matchesFilters(t)));
       return `<section class="column" data-col="${col.id}">
         <div class="col-head">
           <div class="col-title"><span class="bullet" style="background:${col.color}"></span>${col.label}<span class="badge">${tasks.length}</span>
-            <button class="icon-btn" data-add-in="${col.id}" title="Ajouter une tâche dans « ${col.label} »">${ICONS.plus}</button></div>
+            ${col.id === 'done' && tasks.length ? `<button class="icon-btn" data-archive-done title="Archiver les ${tasks.length} tâche(s) terminée(s) affichées" style="margin-left:auto;background:none;color:var(--muted)">${ICONS.archive}</button>` : ''}
+            <button class="icon-btn" data-add-in="${col.id}" title="Ajouter une tâche dans « ${col.label} »" ${col.id === 'done' && tasks.length ? 'style="margin-left:0"' : ''}>${ICONS.plus}</button></div>
           <div class="col-line" style="background:${col.color}"></div>
         </div>
         <div class="cards" data-drop="${col.id}">
@@ -623,6 +675,24 @@
     lastDeleted = null;
     closeToast();
     render();
+  }
+
+  function archiveTasks(ids) {
+    const now = Date.now();
+    const tasks = state.tasks.filter(t => ids.includes(t.id));
+    tasks.forEach(t => { t.archived = true; t.archivedAt = now; t.updatedAt = now; });
+    render();
+    toast(tasks.length === 1 ? `Tâche « ${tasks[0].title} » archivée` : `${tasks.length} tâches archivées`, () => restoreTasks(ids, true));
+  }
+
+  function restoreTasks(ids, silent = false) {
+    for (const t of state.tasks.filter(t => ids.includes(t.id))) {
+      t.archived = false; delete t.archivedAt; t.updatedAt = Date.now();
+      t.order = Math.max(-1, ...liveTasks().filter(x => x.status === t.status && x.id !== t.id).map(x => x.order ?? 0)) + 1;
+    }
+    closeToast();
+    render();
+    if (!silent) toast(ids.length === 1 ? 'Tâche remise dans le tableau' : `${ids.length} tâches remises dans le tableau`);
   }
 
   function duplicateTask(id) {
@@ -712,10 +782,14 @@
           <div class="checklist" id="checklist"></div>
           <div class="check-item"><input type="text" id="newCheck" placeholder="Ajouter une sous-tâche puis Entrée"><button type="button" class="btn small" id="addCheck">Ajouter</button></div>
         </div>
+        ${existing?.archived ? `<div class="hint">Tâche archivée le ${new Date(existing.archivedAt || existing.updatedAt).toLocaleDateString('fr-FR')} : elle n'apparaît pas dans le tableau.</div>` : ''}
         ${existing ? `<div class="hint">Créée le ${new Date(existing.createdAt).toLocaleDateString('fr-FR')} · modifiée le ${new Date(existing.updatedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       </form>
       <footer>
         ${id ? `<button class="btn danger" data-delete-task="${id}">${ICONS.trash}Supprimer</button>` : ''}
+        ${id ? (existing.archived
+          ? `<button class="btn" data-modal-restore="${id}">${ICONS.restore}Restaurer</button>`
+          : `<button class="btn" data-modal-archive="${id}">${ICONS.archive}Archiver</button>`) : ''}
         <div class="spacer"></div>
         <button class="btn" data-close>Annuler</button>
         <button class="btn primary" type="submit" form="taskForm">${id ? 'Enregistrer' : 'Créer la tâche'}</button>
@@ -805,8 +879,10 @@
       <button data-act="dup">${ICONS.copy}Dupliquer</button>
       <button data-act="focus">${ICONS.filter}Filtrer sur ce projet</button>
       <hr><div class="menu-label">Déplacer vers</div>${moves}
-      <hr><button data-act="del" class="danger">${ICONS.trash}Supprimer</button>`, {
+      <hr><button data-act="archive">${ICONS.archive}Archiver</button>
+      <button data-act="del" class="danger">${ICONS.trash}Supprimer</button>`, {
       edit: () => taskModal(id), dup: () => duplicateTask(id), del: () => deleteTask(id),
+      archive: () => archiveTasks([id]),
       move: (s) => moveTask(id, s),
       focus: () => { ui.projectFilter = new Set([t.projectId]); render(); },
     });
@@ -830,7 +906,7 @@
     el.className = 'toast';
     el.innerHTML = `<span>${esc(msg)}</span>${withUndo ? '<button data-undo>Annuler</button>' : ''}`;
     document.body.appendChild(el);
-    el.querySelector('[data-undo]')?.addEventListener('click', undo);
+    el.querySelector('[data-undo]')?.addEventListener('click', typeof withUndo === 'function' ? withUndo : undo);
     toastTimer = setTimeout(closeToast, 6000);
   }
 
@@ -849,6 +925,20 @@
     if (delT) { closeModal(); return deleteTask(delT.dataset.deleteTask); }
     const delP = el.closest('[data-delete-project]');
     if (delP) { return deleteProject(delP.dataset.deleteProject); }
+
+    const mArch = el.closest('[data-modal-archive]');
+    if (mArch) { closeModal(); return archiveTasks([mArch.dataset.modalArchive]); }
+    const mRest = el.closest('[data-modal-restore]');
+    if (mRest) { closeModal(); return restoreTasks([mRest.dataset.modalRestore]); }
+    const rest = el.closest('[data-restore]');
+    if (rest) return restoreTasks([rest.dataset.restore]);
+    if (el.closest('[data-archive-done]')) {
+      return archiveTasks(liveTasks().filter(t => t.status === 'done' && matchesFilters(t)).map(t => t.id));
+    }
+    if (el.closest('[data-archives]')) { ui.view = ui.view === 'archives' ? 'board' : 'archives'; $('#sidebar').classList.remove('open'); return render(); }
+    if (el.closest('[data-back]')) { ui.view = 'board'; return render(); }
+    const openT = el.closest('[data-open-task]');
+    if (openT) return taskModal(openT.dataset.openTask);
 
     const addIn = el.closest('[data-add-in]');
     if (addIn) return taskModal(null, { status: addIn.dataset.addIn });
