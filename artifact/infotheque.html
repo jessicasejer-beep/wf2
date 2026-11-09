@@ -118,21 +118,35 @@ main.wrap { padding-block: 0 72px; }
 .search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; width: min(320px, 100%); }
 .search input { border: 0; outline: 0; font: inherit; flex: 1; min-width: 0; background: none; color: var(--ink); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.chips .chip { padding: 6px 13px; font-size: 14px; }
+.filter-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 0 0 8px; }
+.tools { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.tool { display: flex; align-items: center; gap: 9px; border: 2px solid var(--line); background: var(--surface); border-radius: 14px; padding: 7px 14px 7px 7px; font-weight: 700; font-size: 15px; cursor: pointer; transition: border-color .15s, transform .15s; }
+.tool:hover { transform: translateY(-1px); }
+.tool[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.tool small { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.tool-dot { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-family: var(--display); font-size: 12px; font-weight: 800; background: var(--c, var(--muted)); flex: none; }
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.card-tools { display: flex; gap: 3px; }
+.card-tools .tool-dot { width: 20px; height: 20px; font-size: 9px; border-radius: 6px; }
+.tool-tag { display: inline-flex; align-items: center; gap: 6px; padding-left: 5px; }
+.tool-tag .tool-dot { width: 18px; height: 18px; font-size: 8px; border-radius: 5px; }
 .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 15px; font-weight: 500; cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
 .card { background: var(--surface); border: 0; padding: 0; text-align: left; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s; }
 .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
 .card-img { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--surface-2); overflow: hidden; }
 .card-img img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform .4s; }
 .card:hover .card-img img { transform: scale(1.04); }
-.card-meta { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 14px; font-size: 12.5px; font-weight: 500; background: var(--glass); backdrop-filter: blur(6px); font-variant-numeric: tabular-nums; }
+.card-meta { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 10px; font-size: 11.5px; font-weight: 500; background: var(--glass); backdrop-filter: blur(6px); font-variant-numeric: tabular-nums; }
 .badge { position: absolute; top: 10px; right: 10px; background: var(--surface); color: var(--danger); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; box-shadow: var(--shadow); }
 .badge.busy { left: 10px; right: auto; width: auto; padding: 0 10px; border-radius: 999px; color: var(--ink); font-size: 12px; gap: 6px; display: flex; align-items: center; }
-.card-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 5px; }
-.card-cat { font-size: 12.5px; color: var(--muted); font-weight: 500; }
-.card-body h3 { font-size: 19px; }
+.card-body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 4px; }
+.card-cat { font-size: 12px; color: var(--muted); font-weight: 500; }
+.card-body h3 { font-size: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-body .link { font-size: 13px; }
 .link { color: var(--accent-ink); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 
 .empty { text-align: center; padding: 52px 20px; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); display: grid; gap: 8px; justify-items: center; }
@@ -288,13 +302,38 @@ const ACTIONS = [
 const ACTION = Object.fromEntries(ACTIONS.map((a) => [a.key, a]));
 const DEFAULT_ACTIONS = ["translate", "summary"];
 const CATEGORIES = ["IA", "Product Management", "IA & Produit", "Data", "Autre"];
+// Outils proposés en filtres de premier niveau (les autres outils détectés s'ajoutent à la suite).
+const TOOLS = [
+  { name: "Claude", mark: "Cl", c: "#c96442", aliases: ["claude", "anthropic", "claude ai"] },
+  { name: "ChatGPT", mark: "Gp", c: "#10a37f", aliases: ["chatgpt", "chat gpt", "gpt", "openai", "gpt-4", "gpt-5"] },
+  { name: "Copilot", mark: "Co", c: "#2f6feb", aliases: ["copilot", "github copilot", "microsoft copilot", "m365 copilot"] },
+  { name: "Gemini", mark: "Ge", c: "#7b5cf0", aliases: ["gemini", "google gemini", "bard"] },
+  { name: "Mistral", mark: "Mi", c: "#e8590c", aliases: ["mistral", "mistral ai", "le chat"] },
+  { name: "Perplexity", mark: "Px", c: "#1f7f8a", aliases: ["perplexity", "perplexity ai"] },
+];
+function normalizeTools(list) {
+  const out = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    const s = String(raw).trim();
+    if (!s) continue;
+    const k = s.toLowerCase();
+    const known = TOOLS.find((t) => t.name.toLowerCase() === k || t.aliases.includes(k));
+    const name = known ? known.name : s.charAt(0).toUpperCase() + s.slice(1);
+    if (!out.includes(name)) out.push(name);
+  }
+  return out.slice(0, 6);
+}
+function toolDot(name) {
+  const t = TOOLS.find((x) => x.name === name);
+  return `<span class="tool-dot" style="--c:${t ? t.c : "#8a8275"}" title="${esc(name)}" aria-hidden="true">${esc(t ? t.mark : name.slice(0, 2))}</span>`;
+}
 const LEVELS = ["Débutant", "Intermédiaire", "Avancé"];
 const CAT_EMOJI = { IA: "🤖", "Product Management": "🧭", "IA & Produit": "🚀", Data: "📊", Autre: "✨" };
 
 // ---------- État ----------
 const S = {
   db: null, assets: null, sample: null, downloads: null, ready: false,
-  items: [], results: {}, view: { name: "home" }, filter: "Tous", search: "", page: 0,
+  items: [], results: {}, view: { name: "home" }, filter: "Tous", tool: "Tous", search: "", page: 0,
   running: {}, // "id:action" -> texte en cours (ou "")
   tab: {}, editing: false, armedDelete: false,
 };
@@ -359,7 +398,7 @@ async function analyze(blob) {
     `${CONTEXT}
 
 Analyse l'infographie jointe pour la classer dans la bibliothèque. Réponds uniquement avec un objet JSON de cette forme :
-{"title": "titre court et accrocheur en français, 60 caractères max", "description": "une ou deux phrases en français qui donnent envie de lire la fiche", "category": "une valeur parmi ${CATEGORIES.join(" | ")}", "tags": ["3 à 5 mots-clés courts en français"], "level": "une valeur parmi ${LEVELS.join(" | ")}", "readingMinutes": 4, "sourceLanguage": "langue du texte de l'infographie, en français (ex. anglais)"}`,
+{"title": "titre court et accrocheur en français, 60 caractères max", "description": "une ou deux phrases en français qui donnent envie de lire la fiche", "category": "une valeur parmi ${CATEGORIES.join(" | ")}", "tags": ["3 à 5 mots-clés courts en français"], "level": "une valeur parmi ${LEVELS.join(" | ")}", "readingMinutes": 4, "sourceLanguage": "langue du texte de l'infographie, en français (ex. anglais)", "tools": ["outils d'IA nommés ou clairement visés par l'infographie, par exemple Claude, ChatGPT, Copilot, Gemini, Mistral, Perplexity ; liste vide si elle ne vise aucun outil en particulier"]}`,
     { images: [blob], effort: "low" }
   );
   return {
@@ -370,6 +409,7 @@ Analyse l'infographie jointe pour la classer dans la bibliothèque. Réponds uni
     level: LEVELS.includes(meta?.level) ? meta.level : "Intermédiaire",
     readingMinutes: Math.max(1, Math.round(Number(meta?.readingMinutes) || 3)),
     sourceLanguage: String(meta?.sourceLanguage || ""),
+    tools: normalizeTools(meta?.tools),
   };
 }
 
@@ -434,8 +474,12 @@ function renderHome(favs) {
   const all = S.items;
   const cats = ["Tous", ...CATEGORIES.filter((c) => all.some((i) => i.category === c))];
   if (!cats.includes(S.filter)) S.filter = "Tous";
+  const extraTools = [...new Set(all.flatMap((i) => i.tools || []))].filter((t) => !TOOLS.some((x) => x.name === t)).sort();
+  const toolNames = [...TOOLS.map((t) => t.name), ...extraTools];
+  if (S.tool !== "Tous" && !toolNames.includes(S.tool)) S.tool = "Tous";
+  const pool = all.filter((it) => !favs || it.favorite);
   const q = S.search.trim().toLowerCase();
-  const list = all.filter((it) => (!favs || it.favorite) && (S.filter === "Tous" || it.category === S.filter) &&
+  const list = all.filter((it) => (!favs || it.favorite) && (S.tool === "Tous" || (it.tools || []).includes(S.tool)) && (S.filter === "Tous" || it.category === S.filter) &&
     (!q || [it.title, it.description, ...(it.tags || [])].join(" ").toLowerCase().includes(q)));
   const fiches = all.reduce((n, it) => n + doneCount(it), 0);
   const canAdd = !!S.assets && !!S.sample;
@@ -470,6 +514,12 @@ function renderHome(favs) {
         </div>
         <label class="search"><span aria-hidden="true">🔍</span><input type="search" id="search" placeholder="Rechercher un sujet, un tag…" value="${esc(S.search)}" aria-label="Rechercher"></label>
       </div>
+      <p class="filter-label">Par outil</p>
+      <div class="tools">
+        <button class="tool" aria-pressed="${S.tool === "Tous"}" data-tool="Tous"><span class="tool-dot" style="--c:var(--accent)" aria-hidden="true">✦</span>Tous les outils <small>${pool.length}</small></button>
+        ${toolNames.map((t) => `<button class="tool" aria-pressed="${S.tool === t}" data-tool="${esc(t)}">${toolDot(t)}${esc(t)} <small>${pool.filter((i) => (i.tools || []).includes(t)).length}</small></button>`).join("")}
+      </div>
+      <p class="filter-label">Par thème</p>
       <div class="chips">${cats.map((c) => `<button class="chip" aria-pressed="${c === S.filter}" data-filter="${esc(c)}">${c === "Tous" ? "🌈" : CAT_EMOJI[c]} ${esc(c)}</button>`).join("")}</div>
       ${list.length ? `<div class="grid">${list.map(card).join("")}</div>` : `
         <div class="empty">
@@ -504,7 +554,7 @@ function card(it) {
         </div>
       </div>
       <div class="card-body">
-        <span class="card-cat">${CAT_EMOJI[it.category] || "✨"} ${esc(it.category || "")}</span>
+        <div class="card-top"><span class="card-cat">${CAT_EMOJI[it.category] || "✨"} ${esc(it.category || "")}</span>${(it.tools || []).length ? `<span class="card-tools">${it.tools.slice(0, 3).map((t) => toolDot(t)).join("")}</span>` : ""}</div>
         <h3>${esc(it.title)}</h3>
         <span class="link">Voir la fiche</span>
       </div>
@@ -547,7 +597,7 @@ function renderDetail() {
         </div>
         ${it.analysisError ? `<p class="alert">${esc(it.analysisError)}</p>` : ""}
         <p class="lead">${esc(it.description || "")}</p>
-        <div class="tags">${(it.tags || []).map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>`}
+        <div class="tags">${(it.tools || []).map((t) => `<span class="tag tool-tag">${toolDot(t)}${esc(t)}</span>`).join("")}${(it.tags || []).map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>`}
 
         ${S.sample && canEdit ? `<h2 class="h-small">Que voulez-vous en faire ?</h2>
         <div class="tiles">${ACTIONS.map((a) => {
@@ -589,6 +639,7 @@ function editForm(it) {
     <label>Description<textarea id="f-desc" rows="3">${esc(it.description || "")}</textarea></label>
     <label>Catégorie<select id="f-cat">${CATEGORIES.map((c) => `<option ${c === it.category ? "selected" : ""}>${c}</option>`).join("")}</select></label>
     <label>Tags (séparés par des virgules)<input id="f-tags" value="${esc((it.tags || []).join(", "))}"></label>
+    <label>Outils concernés (séparés par des virgules)<input id="f-tools" value="${esc((it.tools || []).join(", "))}" placeholder="Claude, ChatGPT, Copilot…"></label>
     <div class="row"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><button class="btn btn-ghost btn-sm" type="button" data-cancel-edit>Annuler</button></div>
   </form>`;
 }
@@ -699,6 +750,7 @@ document.addEventListener("click", async (e) => {
   else if ("openUpload" in d) $("#file-input").click();
   else if ("closeModal" in d) $("#modal").hidden = true;
   else if (d.filter) { S.filter = d.filter; render(); }
+  else if (d.tool) { S.tool = d.tool; render(); }
   else if (!it) return;
   else if (d.run) {
     if (S.results[it.id]?.[d.run] && !d.fresh) { S.tab[it.id] = d.run; render(); }
@@ -746,6 +798,7 @@ document.addEventListener("submit", async (e) => {
       description: $("#f-desc").value.trim(),
       category: $("#f-cat").value,
       tags: $("#f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
+      tools: normalizeTools($("#f-tools").value.split(",")),
     });
     S.editing = false; render(); toast("Fiche enregistrée");
   } catch { toast("Impossible d'enregistrer. Réessayez.", true); }
