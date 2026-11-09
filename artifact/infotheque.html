@@ -328,7 +328,14 @@ function toolDot(name) {
   return `<span class="tool-dot" style="--c:${t ? t.c : "#8a8275"}" title="${esc(name)}" aria-hidden="true">${esc(t ? t.mark : name.slice(0, 2))}</span>`;
 }
 const LEVELS = ["Débutant", "Intermédiaire", "Avancé"];
-const CAT_EMOJI = { IA: "🤖", "Product Management": "🧭", "IA & Produit": "🚀", Data: "📊", Autre: "✨" };
+const CAT_EMOJI = { IA: "🤖", "Product Management": "🧭", "IA & Produit": "🚀", Data: "📊", Architecture: "🏗️", Build: "🔨", Application: "📱", Prompting: "💬", Agents: "🤝", Productivité: "⚡", Design: "🎨", Stratégie: "♟️" };
+const catEmoji = (c) => CAT_EMOJI[c] || "🏷️";
+// Thèmes déjà présents dans la bibliothèque, du plus fréquent au moins fréquent.
+function themesInUse() {
+  const n = {};
+  for (const it of S.items) if (it.category && it.category !== "Autre") n[it.category] = (n[it.category] || 0) + 1;
+  return Object.keys(n).sort((a, b) => n[b] - n[a] || a.localeCompare(b, "fr"));
+}
 
 // ---------- État ----------
 const S = {
@@ -393,18 +400,26 @@ async function imageBlob(it) {
 }
 
 // ---------- Appels à Claude ----------
+function cleanTheme(raw) {
+  let t = String(raw || "").trim().replace(/[.·]+$/, "").slice(0, 40);
+  if (!t || /^(autre|autres|divers|général|general)$/i.test(t)) return "IA";
+  // Réutilise l'écriture exacte d'un thème déjà présent (casse, accents).
+  const same = themesInUse().find((x) => x.localeCompare(t, "fr", { sensitivity: "base" }) === 0);
+  return same || t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 async function analyze(blob) {
   const meta = await S.sample.json(
     `${CONTEXT}
 
 Analyse l'infographie jointe pour la classer dans la bibliothèque. Réponds uniquement avec un objet JSON de cette forme :
-{"title": "titre court et accrocheur en français, 60 caractères max", "description": "une ou deux phrases en français qui donnent envie de lire la fiche", "category": "une valeur parmi ${CATEGORIES.join(" | ")}", "tags": ["3 à 5 mots-clés courts en français"], "level": "une valeur parmi ${LEVELS.join(" | ")}", "readingMinutes": 4, "sourceLanguage": "langue du texte de l'infographie, en français (ex. anglais)", "tools": ["outils d'IA nommés ou clairement visés par l'infographie, par exemple Claude, ChatGPT, Copilot, Gemini, Mistral, Perplexity ; liste vide si elle ne vise aucun outil en particulier"]}`,
+{"title": "titre court et accrocheur en français, 60 caractères max", "description": "une ou deux phrases en français qui donnent envie de lire la fiche", "category": "le thème principal, en 1 à 3 mots avec une majuscule. Réutilise un thème existant s'il convient vraiment : ${(themesInUse().length ? themesInUse() : CATEGORIES.slice(0, 4)).join(" | ")}. Sinon crée un nouveau thème court et précis (par exemple Architecture, Build, Application, Prompting, Discovery). Jamais Autre, Divers ou Général", "tags": ["3 à 5 mots-clés courts en français"], "level": "une valeur parmi ${LEVELS.join(" | ")}", "readingMinutes": 4, "sourceLanguage": "langue du texte de l'infographie, en français (ex. anglais)", "tools": ["outils d'IA nommés ou clairement visés par l'infographie, par exemple Claude, ChatGPT, Copilot, Gemini, Mistral, Perplexity ; liste vide si elle ne vise aucun outil en particulier"]}`,
     { images: [blob], effort: "low" }
   );
   return {
     title: String(meta?.title || "Infographie sans titre").slice(0, 90),
     description: String(meta?.description || ""),
-    category: CATEGORIES.includes(meta?.category) ? meta.category : "Autre",
+    category: cleanTheme(meta?.category),
     tags: Array.isArray(meta?.tags) ? meta.tags.map(String).slice(0, 5) : [],
     level: LEVELS.includes(meta?.level) ? meta.level : "Intermédiaire",
     readingMinutes: Math.max(1, Math.round(Number(meta?.readingMinutes) || 3)),
@@ -472,7 +487,7 @@ function render() {
 // ---------- Accueil ----------
 function renderHome(favs) {
   const all = S.items;
-  const cats = ["Tous", ...CATEGORIES.filter((c) => all.some((i) => i.category === c))];
+  const cats = ["Tous", ...themesInUse()];
   if (!cats.includes(S.filter)) S.filter = "Tous";
   const extraTools = [...new Set(all.flatMap((i) => i.tools || []))].filter((t) => !TOOLS.some((x) => x.name === t)).sort();
   const toolNames = [...TOOLS.map((t) => t.name), ...extraTools];
@@ -520,7 +535,7 @@ function renderHome(favs) {
         ${toolNames.map((t) => `<button class="tool" aria-pressed="${S.tool === t}" data-tool="${esc(t)}">${toolDot(t)}${esc(t)} <small>${pool.filter((i) => (i.tools || []).includes(t)).length}</small></button>`).join("")}
       </div>
       <p class="filter-label">Par thème</p>
-      <div class="chips">${cats.map((c) => `<button class="chip" aria-pressed="${c === S.filter}" data-filter="${esc(c)}">${c === "Tous" ? "🌈" : CAT_EMOJI[c]} ${esc(c)}</button>`).join("")}</div>
+      <div class="chips">${cats.map((c) => `<button class="chip" aria-pressed="${c === S.filter}" data-filter="${esc(c)}">${c === "Tous" ? "🌈" : catEmoji(c)} ${esc(c)}</button>`).join("")}</div>
       ${list.length ? `<div class="grid">${list.map(card).join("")}</div>` : `
         <div class="empty">
           <div class="empty-emoji">${favs ? "♡" : "🍽️"}</div>
@@ -554,7 +569,7 @@ function card(it) {
         </div>
       </div>
       <div class="card-body">
-        <div class="card-top"><span class="card-cat">${CAT_EMOJI[it.category] || "✨"} ${esc(it.category || "")}</span>${(it.tools || []).length ? `<span class="card-tools">${it.tools.slice(0, 3).map((t) => toolDot(t)).join("")}</span>` : ""}</div>
+        <div class="card-top"><span class="card-cat">${it.category ? catEmoji(it.category) + " " + esc(it.category) : ""}</span>${(it.tools || []).length ? `<span class="card-tools">${it.tools.slice(0, 3).map((t) => toolDot(t)).join("")}</span>` : ""}</div>
         <h3>${esc(it.title)}</h3>
         <span class="link">Voir la fiche</span>
       </div>
@@ -578,7 +593,7 @@ function renderDetail() {
       <aside class="side">
         <button class="detail-img" data-zoom aria-label="Agrandir l'infographie"><img src="${imgSrc(it)}" alt="${esc(it.title)}"><span class="pill pill-float">🔍 Agrandir</span></button>
         <div class="meta">
-          <div><span>Catégorie</span><strong>${CAT_EMOJI[it.category] || "✨"} ${esc(it.category || "—")}</strong></div>
+          <div><span>Thème</span><strong>${it.category ? catEmoji(it.category) + " " + esc(it.category) : "—"}</strong></div>
           <div><span>Niveau</span><strong>${esc(it.level || "—")}</strong></div>
           <div><span>Lecture</span><strong>${it.readingMinutes ? it.readingMinutes + " min" : "—"}</strong></div>
           <div><span>Langue d'origine</span><strong>${esc(it.sourceLanguage || "—")}</strong></div>
@@ -637,7 +652,7 @@ function editForm(it) {
   return `<form class="edit-form" id="edit-form">
     <label>Titre<input id="f-title" value="${esc(it.title)}" required></label>
     <label>Description<textarea id="f-desc" rows="3">${esc(it.description || "")}</textarea></label>
-    <label>Catégorie<select id="f-cat">${CATEGORIES.map((c) => `<option ${c === it.category ? "selected" : ""}>${c}</option>`).join("")}</select></label>
+    <label>Thème (choisissez-en un ou tapez-en un nouveau)<input id="f-cat" list="theme-list" value="${esc(it.category || "")}"><datalist id="theme-list">${themesInUse().map((c) => `<option value="${esc(c)}"></option>`).join("")}</datalist></label>
     <label>Tags (séparés par des virgules)<input id="f-tags" value="${esc((it.tags || []).join(", "))}"></label>
     <label>Outils concernés (séparés par des virgules)<input id="f-tools" value="${esc((it.tools || []).join(", "))}" placeholder="Claude, ChatGPT, Copilot…"></label>
     <div class="row"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><button class="btn btn-ghost btn-sm" type="button" data-cancel-edit>Annuler</button></div>
@@ -709,7 +724,7 @@ async function startUpload() {
       const up = await S.assets.upload(file);
       const ref = S.db.collection("items").doc();
       s.id = ref.id;
-      await ref.set({ title: file.name.replace(/\.[^.]+$/, ""), description: "", category: "Autre", tags: [], level: null, readingMinutes: null, sourceLanguage: "", assetId: up.id, createdAt: new Date().toISOString(), favorite: false, status: "analyzing", done: {} });
+      await ref.set({ title: file.name.replace(/\.[^.]+$/, ""), description: "", category: "", tags: [], level: null, readingMinutes: null, sourceLanguage: "", assetId: up.id, createdAt: new Date().toISOString(), favorite: false, status: "analyzing", done: {} });
       s.detail = "Lecture et classement par Claude…"; draw();
       try {
         const meta = await analyze(file);
@@ -796,7 +811,7 @@ document.addEventListener("submit", async (e) => {
     await updateItem(id, {
       title: $("#f-title").value.trim() || "Sans titre",
       description: $("#f-desc").value.trim(),
-      category: $("#f-cat").value,
+      category: cleanTheme($("#f-cat").value),
       tags: $("#f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
       tools: normalizeTools($("#f-tools").value.split(",")),
     });
