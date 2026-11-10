@@ -29,6 +29,28 @@ En-tête identique à l'exemple fourni (`ref/import.csv`), séparateur `¤`, enc
 œ/Œ → oe/OE ; € → EUR ; ¤ supprimé ; espaces multiples, tabulations et retours à la ligne → une espace ;
 espaces de début et de fin supprimés). Colonnes de noms de fichiers (1, 13, 14, 15, 20) : NFC + trim seulement.
 
+## Version Excel avec macros
+
+`Fichier-de-travail-import-WF.xlsm` : le modèle Excel, avec les mêmes règles que l'outil web,
+pour les postes Windows avec Excel installé et macros autorisées. Un onglet **Import WebFactory**
+du ruban regroupe les actions : Lire le dossier, Importer un fichier, Vérifier, Copier le rapport
+d'erreurs, Exporter import.csv, Supprimer les données. Le résultat du contrôle s'affiche dans
+l'onglet « Contrôle » (erreurs regroupées par type) et sur les cellules (couleur + note).
+
+| Fichier | Rôle |
+|---|---|
+| `excel/vba/*.bas`, `*.cls` | Code VBA (lisible, modifiable) |
+| `tools/build-xlsm.mjs` | Construit le `.xlsm` : modèle + code VBA + onglet du ruban |
+| `excel/vba-tests/TestsAuto.bas` | Tests des règles (non livré dans le classeur) |
+| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (78 vérifications) |
+| `excel/RECETTE.md` | Essai à faire dans Excel, avec le dossier `excel/recette/Lot_essai` |
+
+```sh
+(cd tools && npm install)     # une fois
+node tools/build-xlsm.mjs     # reconstruire le classeur après modification du code VBA
+python3 tests/test_xlsm.py    # tests (LibreOffice, oletools)
+```
+
 ## Développement
 
 | Fichier | Rôle |
