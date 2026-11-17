@@ -18,7 +18,7 @@
     --warn: #FFE66D; --warn-soft: #FFF6C7; --low-text: #6E5A00;
     --ok: #4ECDC4; --ok-soft: #DCF5F2; --ok-ink: #1B7F78;
     --medium-soft: #E4E8EC; --medium-ink: #292F36;
-    --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4; --col-blocked: #FF6B6B; --col-preprod: #7BDFF2; --col-prod: #1A9E96;
+    --col-todo: #292F36; --col-done: #4ECDC4; --col-blocked: #FF6B6B;
     --radius: 12px;
     color-scheme: light;
   }
@@ -100,7 +100,7 @@
   .stat.danger .v { color: var(--danger-ink); }
 
   /* ---------- Board ---------- */
-  .board { flex: 1; display: grid; grid-template-columns: repeat(6, minmax(230px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
+  .board { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(280px, 1fr)); gap: 18px; padding: 0 24px 24px; overflow: auto; min-height: 0; }
   .column { background: var(--column); border-radius: 14px; display: flex; flex-direction: column; min-height: 0; }
   .col-head { padding: 14px 14px 10px; }
   .col-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
@@ -218,7 +218,7 @@
     .topbar h1 { font-size: 17px; }
     .main { overflow-x: hidden; }
     .stats { padding: 0 16px 12px; }
-    .board { padding: 0 16px 16px; grid-template-columns: repeat(6, minmax(270px, 85vw)); }
+    .board { padding: 0 16px 16px; grid-template-columns: repeat(3, minmax(270px, 85vw)); }
     .search { min-width: 0; flex: 1 1 160px; }
     .row { grid-template-columns: 1fr; }
   }
@@ -287,13 +287,13 @@
   // ================= Données =================
   const STORAGE_KEY = 'kanban-projets-v1';
   const COLUMNS = [
-    { id: 'todo', label: 'À faire', color: 'var(--col-todo)' },
-    { id: 'progress', label: 'En cours', color: 'var(--col-progress)' },
-    { id: 'blocked', label: 'Bloqué', color: 'var(--col-blocked)' },
-    { id: 'preprod', label: 'En preprod', color: 'var(--col-preprod)' },
-    { id: 'prod', label: 'En production', color: 'var(--col-prod)' },
-    { id: 'done', label: 'Terminé', color: 'var(--col-done)' },
+    { id: 'todo', label: 'À faire / En cours', color: 'var(--col-todo)' },
+    { id: 'blocked', label: 'Bloqué / Attente validation', color: 'var(--col-blocked)' },
+    { id: 'done', label: 'Terminé / En prod', color: 'var(--col-done)' },
   ];
+  // Anciens statuts regroupés dans les 3 colonnes actuelles.
+  const STATUS_ALIAS = { progress: 'todo', preprod: 'blocked', prod: 'done' };
+  const migrateTask = (t) => (STATUS_ALIAS[t.status] ? { ...t, status: STATUS_ALIAS[t.status] } : t);
   const PRIORITIES = { high: 'Haute', medium: 'Moyenne', low: 'Basse' };
   const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
   const PALETTE = ['#4ECDC4', '#FF6B6B', '#FFE66D', '#5A6673', '#1A9E96', '#F4A259', '#7BDFF2', '#B388EB', '#E84A5F', '#9BC53D'];
@@ -319,8 +319,8 @@
         t(p1, 'Recherche utilisateurs', 'todo', 'high', { description: 'Interviews pour comprendre les besoins des utilisateurs.', dueDate: addDays(2),
           checklist: [{ id: uid(), text: 'Préparer le guide d\'entretien', done: true }, { id: uid(), text: 'Recruter 5 participants', done: false }, { id: uid(), text: 'Synthèse', done: false }] }),
         t(p2, 'Wireframes', 'todo', 'high', { description: 'Wireframes basse fidélité des écrans principaux.', dueDate: addDays(-1), tags: ['design'] }),
-        t(p2, 'Illustrations onboarding', 'progress', 'low', { dueDate: addDays(5), tags: ['design'] }),
-        t(p3, 'Moodboard', 'progress', 'medium', { description: 'Pistes visuelles pour la campagne.', tags: ['créa'] }),
+        t(p2, 'Illustrations onboarding', 'todo', 'low', { dueDate: addDays(5), tags: ['design'] }),
+        t(p3, 'Moodboard', 'blocked', 'medium', { description: 'Pistes visuelles pour la campagne.', tags: ['créa'] }),
         t(p2, 'Maquettes app mobile', 'done', 'medium', { tags: ['design'] }),
         t(p1, 'Design system', 'done', 'medium', { description: 'Adapter l\'UI à partir des composants existants.' }),
       ],
@@ -407,6 +407,7 @@
     if (mode !== 'loading') return;
     mode = 'local';
     state = loadLocal();
+    state.tasks = state.tasks.map(migrateTask);
     COLUMNS.forEach(c => { if (state.tasks.some(t => t.status === c.id && t.order == null)) normalizeOrder(c.id); });
     setSync('local');
     render();
@@ -417,7 +418,8 @@
     const loaded = {};
     for (const coll of COLLS) {
       db.collection(coll).onSnapshot(snap => {
-        const items = snap.docs.map(d => ({ ...JSON.parse(JSON.stringify(d.data() || {})), id: d.id }));
+        let items = snap.docs.map(d => ({ ...JSON.parse(JSON.stringify(d.data() || {})), id: d.id }));
+        if (coll === 'tasks') items = items.map(migrateTask);
         state[coll] = items;
         synced[coll] = new Map(items.map(x => [x.id, JSON.stringify(bodyOf(x))]));
         loaded[coll] = true;
@@ -545,7 +547,7 @@
       <div class="stat"><div class="v">${scope.length}</div><div class="l">Tâches</div></div>
       <div class="stat"><div class="v">${pct}%</div><div class="l">Avancement (${done} terminées)</div></div>
       <div class="stat ${high ? 'danger' : ''}"><div class="v">${high}</div><div class="l">Priorité haute en cours</div></div>
-      <div class="stat ${blocked ? 'danger' : ''}"><div class="v">${blocked}</div><div class="l">Bloquées</div></div>
+      <div class="stat ${blocked ? 'danger' : ''}"><div class="v">${blocked}</div><div class="l">Bloquées / en attente</div></div>
       <div class="stat ${overdue ? 'danger' : ''}" ${overdue ? 'style="cursor:pointer" data-show-overdue title="Afficher les tâches en retard"' : ''}><div class="v">${overdue}</div><div class="l">En retard</div></div>`;
   }
 
@@ -774,7 +776,7 @@
           <div class="field"><label for="tDue">Échéance</label><input type="date" id="tDue" value="${t.dueDate || ''}"></div>
         </div>
         <div class="field"><label>Statut</label><div class="seg" id="statusSeg">${statusSeg}</div></div>
-        <div class="field" id="blockedField" ${t.status === 'blocked' ? '' : 'hidden'}><label for="tBlocked">Motif du blocage</label><input type="text" id="tBlocked" maxlength="200" placeholder="En attente de validation client, accès manquant…" value="${esc(t.blockedReason || '')}"></div>
+        <div class="field" id="blockedField" ${t.status === 'blocked' ? '' : 'hidden'}><label for="tBlocked">Motif (blocage ou validation attendue)</label><input type="text" id="tBlocked" maxlength="200" placeholder="En attente de validation client, accès manquant…" value="${esc(t.blockedReason || '')}"></div>
         <div class="field"><label>Priorité</label><div class="seg" id="prioSeg">${prioSeg}</div></div>
         <div class="field"><label for="tDesc">Description</label><textarea id="tDesc" rows="3" placeholder="Détails, liens, notes…">${esc(t.description)}</textarea></div>
         <div class="field"><label for="tTags">Étiquettes</label><input type="text" id="tTags" placeholder="design, urgent, client… (séparées par des virgules)" value="${esc((t.tags || []).join(', '))}"></div>
