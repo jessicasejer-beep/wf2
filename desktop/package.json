@@ -1,0 +1,37 @@
+{
+  "name": "kanban-projets",
+  "productName": "Kanban Projets",
+  "version": "1.0.0",
+  "description": "Kanban multi-projets avec données enregistrées sur le PC",
+  "author": "Jessica",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "copy-page": "node scripts/copy-page.js",
+    "start": "npm run copy-page && electron .",
+    "dist:win": "bash scripts/build-win.sh"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8",
+    "pe-library": "^1.0.1",
+    "resedit": "^2.0.2"
+  },
+  "build": {
+    "appId": "fr.kanban.projets",
+    "productName": "Kanban Projets",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    }
+  }
+}

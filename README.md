@@ -22,3 +22,26 @@ Tableau kanban unique pour suivre tous vos projets en cours. Chaque projet a sa 
 | `P` | Nouveau projet |
 | `/` | Rechercher |
 | `Échap` | Fermer la fenêtre / le menu |
+
+## Application Windows (données sur le PC)
+
+Le dossier `desktop/` contient une version installable sous Windows (Electron). La page est la même que `index.html`, mais les données sont enregistrées dans un fichier sur le PC :
+
+- Données : `%APPDATA%\Kanban Projets\kanban-data.json` (menu **Fichier › Ouvrir le dossier des données**).
+- Sauvegardes automatiques : une copie par jour d'utilisation dans `%APPDATA%\Kanban Projets\sauvegardes\`, les 14 dernières sont gardées.
+- La désinstallation garde les données.
+- Installation pour l'utilisateur courant, sans droits administrateur.
+
+Pour reprendre les données de la version en ligne : **Exporter** dans la page en ligne, puis **Importer** dans l'application.
+
+### Fabriquer l'installeur (depuis Linux, sans Wine)
+
+```bash
+sudo apt-get install nsis zip
+cd desktop
+npm install
+npm run dist:win
+```
+
+Résultat dans `desktop/dist/` : `Kanban-Projets-Setup-<version>.exe` (installeur) et `Kanban-Projets-Portable-<version>.zip` (version sans installation).
+Pour tester l'application sur Linux : `npm start`.

@@ -329,7 +329,9 @@
 
   // ================= Stockage =================
   // Dans claude.ai : base de données de l'artifact (synchronisée entre appareils).
+  // Application Windows : fichier JSON sur le PC (window.desktopStore).
   // En fichier local : localStorage du navigateur.
+  const desktop = window.desktopStore || null;
   let mode = 'loading'; // 'db' | 'local'
   let db = null;
   let state = { projects: [], tasks: [] };
@@ -338,6 +340,16 @@
   const writeChains = new Map();
 
   function loadLocal() {
+    if (desktop) {
+      try {
+        const raw = desktop.load();
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (Array.isArray(data.projects) && Array.isArray(data.tasks)) return data;
+        }
+      } catch (e) { /* fichier illisible : on repart d'un tableau vide */ }
+      return { projects: [], tasks: [] };
+    }
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -365,7 +377,7 @@
     const el = document.getElementById('syncStatus');
     if (!el) return;
     el.className = 'sync ' + (kind === 'err' ? 'err' : kind === 'loading' ? '' : 'ok');
-    el.textContent = text || { db: 'Enregistré en ligne', local: 'Enregistré dans ce navigateur', loading: 'Chargement…' }[kind];
+    el.textContent = text || { db: 'Enregistré en ligne', local: desktop ? 'Enregistré sur ce PC' : 'Enregistré dans ce navigateur', loading: 'Chargement…' }[kind];
   }
 
   function enqueue(key, fn) {
@@ -397,10 +409,15 @@
     }
   }
 
+  let lastDesktopJson = null;
   function save() {
     try { localStorage.setItem(STORAGE_KEY + '-ui', JSON.stringify({ projectFilter: [...ui.projectFilter], sort: ui.sort })); } catch (e) {}
     if (mode === 'db') syncDb();
-    else if (mode === 'local') { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+    else if (mode === 'local') {
+      const json = JSON.stringify(state);
+      if (desktop) { if (json !== lastDesktopJson) { lastDesktopJson = json; desktop.save(json); } }
+      else { try { localStorage.setItem(STORAGE_KEY, json); } catch (e) {} }
+    }
   }
 
   function startLocal() {
@@ -411,6 +428,7 @@
     COLUMNS.forEach(c => { if (state.tasks.some(t => t.status === c.id && t.order == null)) normalizeOrder(c.id); });
     setSync('local');
     render();
+    if (desktop && !state.projects.length) toast('Tableau vide : créez un projet ou importez une sauvegarde (bouton Importer).');
   }
 
   function startDb(handle) {
