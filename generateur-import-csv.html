@@ -494,6 +494,11 @@ const LISTS = {
 const LIST_SETS = Object.fromEntries(Object.entries(LISTS).map(([k, a]) => [k, new Set(a.map(o => o.v))]));
 /* Colonne E : peut rester vide pour ces titres (commentaire E1 + mise en forme conditionnelle du modèle). */
 const EXEMPT_TITLES = new Set(["l'intégrale du guide pédagogique", "l'intégrale du livre du professeur", 'livre du professeur']);
+/* Règles métier (bug « ressources invisibles sur le site compagnon », nov. 2026) :
+   1) « Fichier lié à la présentation de la méthode » = 1 retire la ressource des onglets Chapitres et Catégories : défaut 0.
+   2) « Téléchargement autorisé » = 0 sur un .ppsx empêche à la fois de le visualiser et de le télécharger : doit être 1. */
+const COL_DL = 11, COL_METHODE = 17;
+const DOWNLOAD_REQUIRED_EXT = ['ppsx'];
 const SH = '­';
 /* Colonnes : libellé court affiché, poids de largeur, règles. */
 const COLS = [
@@ -508,13 +513,13 @@ const COLS = [
   { t: `Descrip${SH}tion`, w: 1.35 },
   { t: 'Picto', w: 1.05, req: true, list: 'picto' },
   { t: 'Profil', w: 0.95, req: true, list: 'profil' },
-  { t: `Télé${SH}char${SH}ge${SH}ment auto${SH}risé (0/1)`, w: 0.85, req: true, list: 'zeroun', num: true, center: true },
+  { t: `Télé${SH}char${SH}ge${SH}ment auto${SH}risé (0/1)`, w: 0.85, req: true, list: 'zeroun', num: true, center: true, note: 'Doit être 1 pour un fichier .ppsx : à 0, il ne peut être ni visualisé ni téléchargé.' },
   { t: `Audio${SH}des${SH}crip${SH}tion (.mp3)`, w: 0.95, file: true, ext: ['mp3'] },
   { t: `Sous-titres (.vtt)`, w: 0.9, file: true, ext: ['vtt'] },
   { t: `Trans${SH}crip${SH}tion (.pdf/${SH}.doc)`, w: 0.95, file: true, ext: ['pdf', 'doc'] },
   { t: `Lan${SH}gue`, w: 0.75, req: true, list: 'langue', center: true },
   { t: `Inté${SH}grale livre du prof. (0/1)`, w: 0.85, req: true, list: 'zeroun', num: true, center: true },
-  { t: `Fi${SH}chier pré${SH}sen${SH}ta${SH}tion mé${SH}thode (0/1)`, w: 0.9, req: true, list: 'zeroun', num: true, center: true },
+  { t: `Fi${SH}chier pré${SH}sen${SH}ta${SH}tion mé${SH}thode (0/1)`, w: 0.9, req: true, list: 'zeroun', num: true, center: true, note: 'Laisser à 0 pour une ressource normale. À 1, elle disparaît des onglets Chapitres et Catégories du site.' },
   { t: 'N° de page', w: 0.6, center: true },
   { t: `Minia${SH}ture vidéo (.jpg 310×${SH}220)`, w: 0.95, file: true, ext: ['jpg', 'jpeg'] },
   { t: `Water${SH}mark`, w: 0.85, list: 'watermark' },
@@ -659,6 +664,10 @@ function validate() {
         : col.list === 'picto' ? 'Picto : valeur absente de la liste des pictos (choisir dans le menu déroulant)'
         : `${plainName(c)} : valeur hors de la liste (${LISTS[col.list].map(o => o.v).join(', ')}), majuscules comprises`);
     });
+    // Règle : « Fichier lié à la présentation de la méthode » doit rester à 0 pour une ressource normale
+    if (v[COL_METHODE] === '1') add(r, COL_METHODE, 'warn', `${plainName(COL_METHODE)} : à 1, la ressource est traitée comme fichier de présentation de la méthode et n'apparaît NI dans l'onglet Chapitres NI dans l'onglet Catégories du site. Mettre 0 pour une ressource normale (1 uniquement pour le fichier de présentation de la méthode).`, 'methode', `${plainName(COL_METHODE)} = 1 : la ressource n'apparaîtra ni dans Chapitres ni dans Catégories (mettre 0 pour une ressource normale)`);
+    // Règle : un fichier .ppsx doit être téléchargeable (sinon ni visualisation ni téléchargement)
+    if (v[0] !== '' && DOWNLOAD_REQUIRED_EXT.includes(extOf(v[0])) && v[COL_DL] === '0') add(r, COL_DL, 'err', `${plainName(COL_DL)} : doit être 1 pour un fichier .${extOf(v[0])}. À 0, la ressource ne peut être ni visualisée ni téléchargée sur le site.`, 'ppsx', `Fichier .ppsx avec téléchargement à 0 : mettre 1 (sinon la ressource n'est ni visible ni téléchargeable)`);
     // Nom du fichier
     const f = v[0];
     if (f !== '') {
@@ -1106,7 +1115,12 @@ function addFolderFiles(names) {
   // Remplace d'abord les lignes vides de fin
   while (S.rows.length && isRowEmpty(S.rows[S.rows.length - 1])) S.rows.pop();
   const startAt = S.rows.length;
-  for (const nm of names) { const r = emptyRow(); r[0] = nm; S.rows.push(r); }
+  for (const nm of names) {
+    const r = emptyRow(); r[0] = nm;
+    r[COL_METHODE] = '0';                                                  // défaut : ressource normale
+    if (DOWNLOAD_REQUIRED_EXT.includes(extOf(nm))) r[COL_DL] = '1';        // .ppsx : téléchargement obligatoire
+    S.rows.push(r);
+  }
   ensureRows();
   S.sel = { ar: startAt, ac: 1, fr: startAt, fc: 1 };
   S._touched = true;
