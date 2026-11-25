@@ -93,7 +93,7 @@ const COLONNES = [
   ['O', 'Transcription', 'Non', 'Nom d’un fichier .pdf ou .doc du dossier.', 'chap1_transcription.pdf'],
   ['P', 'Langue', 'Oui', 'Un code de la liste « Langue » (partie 2).', 'FR'],
   ['Q', 'Intégrale du livre du professeur', 'Oui', '0 (non) ou 1 (oui).', '0'],
-  ['R', 'Fichier lié à la présentation de la méthode', 'Automatique', 'Rien à saisir : toujours 0, rempli automatiquement (colonne grise, non modifiable).', '0'],
+  ['R', 'Fichier lié à la présentation de la méthode', 'Automatique', 'Rien à saisir : 0 ajouté automatiquement dès que la ligne contient des données (colonne grise, non modifiable).', '0'],
   ['S', 'N° de page', 'Non', 'Numéro de page.', '12'],
   ['T', 'Miniature vidéo', 'Non', 'Nom d’un fichier .jpg du dossier, 310 × 220 pixels.', 'chap1_video.jpg'],
   ['U', 'Watermark', 'Non', 'Une valeur de la liste « Watermark » (partie 2).', 'nouveau'],
@@ -176,7 +176,7 @@ export function feuilleReadMe(S) {
   add([['B', 'Étape', S.entete], ['C', 'Que faire', S.entete], ['D', 'Bouton du ruban', S.entete]], 18);
   const etape = (a, b, c, ht = 30) => add([['B', a, S.celluleGras], ['C', b, S.cellule], ['D', c, S.celluleCentre]], ht);
   etape('1. Créer les lignes', 'Choisissez le dossier qui contient les fichiers à importer : une ligne par fichier est créée, avec le nom exact du fichier en colonne A.', 'Sélectionner un dossier de ressources');
-  etape('2. Compléter', "Remplissez les colonnes : en-tête bleu = obligatoire, en-tête gris = facultatif. La colonne R se remplit seule. Valeurs possibles et pictos : onglet « AIDE ».", '—', 44);
+  etape('2. Compléter', "Remplissez les colonnes : en-tête bleu = obligatoire, en-tête gris = facultatif. La colonne R se remplit seule (0) dès qu'une ligne contient des données. Valeurs possibles et pictos : onglet « AIDE ».", '—', 44);
   etape('3. Contrôler', "Les cellules en erreur se colorent et portent une note (survolez-les). L'onglet « Contrôle » liste les erreurs par type.", 'Vérifier');
   etape('4. Corriger', "Corrigez chaque cellule signalée, puis cliquez à nouveau sur « Vérifier », jusqu'à « Aucune erreur bloquante ».", 'Vérifier');
   etape('5. Exporter', "Enregistrez le fichier sous le nom exact import.csv, puis créez un .zip avec import.csv et tous les fichiers, sans sous-dossier.", 'Exporter import.csv');
@@ -216,15 +216,16 @@ export function adapterFeuilleTravail(xml, S) {
   xml = xml.replace(/<col min="1" max="1" width="[\d.]+"/, '<col min="1" max="1" width="72.7109375"');
   xml = xml.replace(/<col min="2" max="2" width="[\d.]+"/, '<col min="2" max="2" width="42"');
   xml = xml.replace('<c r="R1" s="2" t="s">', '<c r="R1" s="3" t="s">');                 // en-tête gris
-  xml = xml.replace(/<c r="R(\d+)" s="\d+"\/>/g, (m, n) => `<c r="R${n}" s="${S.auto}"><v>0</v></c>`);
+  // cellules grises et vides : le 0 est écrit par les macros sur les seules lignes remplies
+  xml = xml.replace(/<c r="R(\d+)" s="\d+"\/>/g, (m, n) => `<c r="R${n}" s="${S.auto}"/>`);
   // La ligne est « commencée » si une colonne autre que R (toujours remplie) contient une valeur
   xml = xml.split('COUNTA($A2:$W2)&gt;0').join('COUNTA($A2:$Q2,$S2:$V2)&gt;0');
   xml = xml.replace('<conditionalFormatting sqref="P2:R2000">', '<conditionalFormatting sqref="P2:Q2000">');
   xml = xml.replace('sqref="L2:L2000 Q2:R2000"', 'sqref="L2:L2000 Q2:Q2000"');
   xml = xml.replace('(onglet « pictos »)', '(onglet « AIDE »)');
   xml = xml.replace('<dataValidations count="5">', '<dataValidations count="6">');
-  xml = xml.replace('</dataValidations>', '<dataValidation type="whole" operator="equal" allowBlank="1" showInputMessage="1" showErrorMessage="1" errorTitle="Colonne automatique" error="La colonne R est remplie automatiquement : elle vaut toujours 0." promptTitle="Colonne automatique" prompt="Toujours 0, rempli automatiquement." sqref="R2:R2000"><formula1>0</formula1></dataValidation></dataValidations>');
-  for (const attendu of ['COUNTA($A2:$Q2,$S2:$V2)', 'sqref="P2:Q2000"', 'Q2:Q2000"', 'sqref="R2:R2000"', `<c r="R2000" s="${S.auto}"><v>0</v></c>`]) {
+  xml = xml.replace('</dataValidations>', '<dataValidation type="whole" operator="equal" allowBlank="1" showInputMessage="1" showErrorMessage="1" errorTitle="Colonne automatique" error="La colonne R est remplie automatiquement : 0 sur les lignes remplies, vide sinon." promptTitle="Colonne automatique" prompt="Rempli automatiquement : 0 dès que la ligne contient des données." sqref="R2:R2000"><formula1>0</formula1></dataValidation></dataValidations>');
+  for (const attendu of ['COUNTA($A2:$Q2,$S2:$V2)', 'sqref="P2:Q2000"', 'Q2:Q2000"', 'sqref="R2:R2000"', `<c r="R2000" s="${S.auto}"/>`]) {
     if (!xml.includes(attendu)) throw new Error('onglet de travail : transformation manquante ' + attendu);
   }
   return xml;

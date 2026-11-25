@@ -40,6 +40,7 @@ def check(cond, label, extra=""):
 print("■ Classeur livré")
 z = zipfile.ZipFile(os.path.join(ROOT, "Fichier-de-travail-import-WF.xlsm"))
 names = z.namelist()
+import re  # noqa: E402
 import xml.dom.minidom  # noqa: E402
 invalides = []
 for n in names:
@@ -57,8 +58,8 @@ check('activeTab="0"' in z.read("xl/workbook.xml").decode(), "onglet de travail 
 check(sum(1 for n in names if n.startswith("xl/media/")) == 47, "images des pictos conservées")
 s1 = z.read("xl/worksheets/sheet1.xml").decode()
 check(s1.count("<dataValidation ") == 6 and s1.count("<conditionalFormatting") == 7, "listes déroulantes et couleurs du modèle conservées")
-check('sqref="R2:R2000"' in s1 and 'COUNTA($A2:$Q2,$S2:$V2)' in s1 and '<c r="R1" s="3"' in s1 and s1.count("<v>0</v></c>") >= 1999,
-      "colonne R : 0 partout, grisée, non modifiable ; règles de couleur sans R")
+check('sqref="R2:R2000"' in s1 and 'COUNTA($A2:$Q2,$S2:$V2)' in s1 and '<c r="R1" s="3"' in s1 and re.search(r'<c r="R2" s="\d+"/>', s1) and not re.search(r'<c r="R\d+" s="\d+"><v>', s1),
+      "colonne R : grisée et vide dans le modèle (aucune ligne parasite) ; règles de couleur sans R")
 check('sqref="F2' not in s1, "colonne F facultative (aucune règle de couleur)")
 wb = z.read("xl/workbook.xml").decode()
 import re  # noqa: E402

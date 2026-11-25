@@ -33,7 +33,7 @@ espaces de début et de fin supprimés). Colonnes de noms de fichiers (1, 13, 14
 
 `Fichier-de-travail-import-WF.xlsm` : le modèle Excel, avec les mêmes règles que l'outil web,
 pour les postes Windows avec Excel installé et macros autorisées. Onglets : **READ ME** (mode
-d'emploi), **SC_import_modele_V1** (le tableau ; colonne R automatique, toujours 0) et **AIDE**
+d'emploi), **SC_import_modele_V1** (le tableau ; colonne R automatique : 0 sur les lignes remplies) et **AIDE**
 (colonnes, valeurs autorisées, pictos avec leur image). L'onglet **Import WebFactory** du ruban
 regroupe les actions : Sélectionner un dossier de ressources, Vérifier un fichier, Vérifier,
 Comparer le fichier et les ressources, Exporter import.csv, Supprimer les données. Les résultats
@@ -44,7 +44,7 @@ s'affichent dans les onglets « Contrôle » et « Comparaison », et sur les ce
 | `excel/vba/*.bas`, `*.cls` | Code VBA (lisible, modifiable) |
 | `tools/build-xlsm.mjs`, `tools/xlsm-feuilles.mjs` | Construisent le `.xlsm` : modèle + code VBA + ruban + onglets READ ME et AIDE |
 | `excel/vba-tests/TestsAuto.bas` | Tests des règles (non livré dans le classeur) |
-| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (105 vérifications) |
+| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (108 vérifications) |
 | `excel/RECETTE.md` | Essai à faire dans Excel, avec les dossiers de `excel/recette/` |
 
 ```sh

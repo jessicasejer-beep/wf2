@@ -329,20 +329,27 @@ Public Function TestColonneR() As String
     Set ws = FeuilleTravail()
     etape = "préparation"
     ws.Range("A2:W2000").ClearContents
-    RemplirColonneR ws
-    Call Verif(ws.Range("R2").Value = 0 And ws.Range("R2000").Value = 0, "colonne R remplie de 0 (R2 à R2000)")
-    Call Verif(DerniereLigne(ws) = 1, "tableau vide malgré la colonne R remplie")
+    MettreAJourColonneR ws
+    Call Verif(CStr(ws.Range("R2").Value) = "" And CStr(ws.Range("R2000").Value) = "", "tableau vide : colonne R vide")
     EcrireLigne ws, 2, "18=1"
-    Call Verif(Controler(ws) = 0 And nbRessources = 1, "1 ressource, aucune erreur (R ignorée par les contrôles)")
+    ws.Range("R3").Value = 0                     ' un 0 isolé ne fait pas une ressource
+    MettreAJourColonneR ws
+    Call Verif(ws.Range("R2").Value = 0, "ligne remplie : R = 0 (au lieu de 1)")
+    Call Verif(CStr(ws.Range("R3").Value) = "", "ligne vide : R effacée")
+    Call Verif(DerniereLigne(ws) = 2, "dernière ligne = 2")
+    Call Verif(Controler(ws) = 0 And nbRessources = 1, "1 ressource, aucune erreur")
     t = TexteCsv(ws)
     lignesCsv = Split(t, vbCrLf)
     champs = Split(lignesCsv(1), ChrW(164))
-    Call Verif(champs(17) = "0", "export : colonne R toujours 0 (" & champs(17) & ")")
-    Call Verif(UBound(lignesCsv) = 2, "export : une seule ressource, pas de ligne pour les autres 0 de la colonne R")
+    Call Verif(champs(17) = "0", "export : colonne R = 0 (" & champs(17) & ")")
+    Call Verif(UBound(lignesCsv) = 2, "export : une seule ressource")
+    ws.Range("A2:Q2").ClearContents: ws.Range("S2:W2").ClearContents
+    MettreAJourColonneR ws, 2, 2
+    Call Verif(CStr(ws.Range("R2").Value) = "", "ligne vidée : R effacée")
     Dim lignes As Collection, sep As String, notes As String
     Set lignes = LireCsv("Nom du fichier;b" & vbCrLf & "x.pdf;T;;;N;;;C;;image;ELE;1;;;;FR;0;1;;;;;" & vbCrLf, sep)
     EcrireLignes ws, PreparerLignes(lignes, notes)
-    Call Verif(ws.Range("R2").Value = 0 And ws.Range("R3").Value = 0, "import : colonne R remise à 0")
+    Call Verif(ws.Range("R2").Value = 0 And CStr(ws.Range("R3").Value) = "", "import : R = 0 sur la ligne importée, vide ensuite")
     TestColonneR = Fin()
     Exit Function
 Erreur:

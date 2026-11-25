@@ -164,6 +164,7 @@ Private Sub EcrireNoms(ws As Worksheet, ByVal premiere As Long, t As Variant, By
     Application.EnableEvents = False
     ws.Range(ws.Cells(premiere, 1), ws.Cells(premiere + n - 1, 1)).Value = arr
     Application.EnableEvents = True
+    MettreAJourColonneR ws, premiere, premiere + n - 1
 End Sub
 
 ' Fichiers du dossier qui ne figurent dans aucune colonne de nom de fichier du tableau
@@ -313,17 +314,33 @@ Public Sub EcrireLignes(ws As Worksheet, lignes As Collection)
         Next r
         ws.Range(ws.Cells(PREMIERE_LIGNE, 1), ws.Cells(PREMIERE_LIGNE + lignes.Count - 1, NB_COL - 1)).Value = arr
     End If
-    RemplirColonneR ws
+    MettreAJourColonneR ws
     Application.EnableEvents = True
     Application.ScreenUpdating = True
 End Sub
 
-' Colonne R (fichier lié à la présentation de la méthode) : toujours 0, sur toutes les lignes
-Public Sub RemplirColonneR(ws As Worksheet)
-    Dim evenements As Boolean
+' Colonne R (fichier lié à la présentation de la méthode) : 0 sur les lignes remplies, vide sur
+' les lignes vides (sinon un enregistrement en CSV ferait apparaître des lignes sans ressource).
+' Seules les cellules dont la valeur doit changer sont écrites.
+Public Sub MettreAJourColonneR(ws As Worksheet, Optional ByVal premiere As Long = 0, Optional ByVal derniere As Long = 0)
+    Dim donnees As Variant, r As Long, voulu As String, actuel As String, evenements As Boolean
+    If premiere < PREMIERE_LIGNE Then premiere = PREMIERE_LIGNE                    ' 0 : tout le tableau
+    If derniere = 0 Or derniere > DERNIERE_LIGNE_MAX Then derniere = DERNIERE_LIGNE_MAX
+    If derniere < premiere Then Exit Sub
+    donnees = ws.Range(ws.Cells(premiere, 1), ws.Cells(derniere, NB_COL)).Value2
     evenements = Application.EnableEvents
     Application.EnableEvents = False
-    ws.Range(ws.Cells(PREMIERE_LIGNE, COL_METHODE), ws.Cells(DERNIERE_LIGNE_MAX, COL_METHODE)).Value = 0
+    For r = 1 To derniere - premiere + 1
+        If LigneVide(donnees, r) Then voulu = "" Else voulu = "0"
+        actuel = TexteCellule(donnees(r, COL_METHODE))
+        If actuel <> voulu Then
+            If voulu = "" Then
+                ws.Cells(premiere + r - 1, COL_METHODE).ClearContents
+            Else
+                ws.Cells(premiere + r - 1, COL_METHODE).Value = 0
+            End If
+        End If
+    Next r
     Application.EnableEvents = evenements
 End Sub
 
@@ -422,6 +439,7 @@ Public Sub Verifier(Optional ByVal afficher As Boolean = True)
     Set ws = FeuilleTravail()
     Application.ScreenUpdating = False
     Application.StatusBar = "Contrôle en cours…"
+    MettreAJourColonneR ws
     Controler ws
     Marquer ws
     EcrireRapport
@@ -497,19 +515,13 @@ End Sub
 ' Appelé quand une cellule du tableau est modifiée : retire sa couleur et sa note de contrôle,
 ' devenues obsolètes. (Seulement si la cellule était marquée, pour garder Ctrl+Z ailleurs.)
 Public Sub RetirerMarquesModifiees(ByVal cible As Range)
-    Dim zone As Range, cellule As Range, n As Long, zoneR As Range
-    ' Colonne R : non modifiable, toujours 0
-    Set zoneR = Application.Intersect(cible, cible.Worksheet.Range(cible.Worksheet.Cells(PREMIERE_LIGNE, COL_METHODE), cible.Worksheet.Cells(DERNIERE_LIGNE_MAX, COL_METHODE)))
+    Dim zone As Range, cellule As Range, n As Long, zoneR As Range, bloc As Range
+    ' Colonne R : 0 si la ligne contient des données, vide sinon (non modifiable)
+    Set zoneR = Application.Intersect(cible.EntireRow, cible.Worksheet.Range(cible.Worksheet.Cells(PREMIERE_LIGNE, 1), cible.Worksheet.Cells(DERNIERE_LIGNE_MAX, 1)))
     If Not zoneR Is Nothing Then
-        If zoneR.CountLarge <= 5000 Then
-            For Each cellule In zoneR.Cells
-                If CStr(cellule.Value) <> "0" Then
-                    Application.EnableEvents = False
-                    cellule.Value = 0
-                    Application.EnableEvents = True
-                End If
-            Next cellule
-        End If
+        For Each bloc In zoneR.Areas
+            MettreAJourColonneR cible.Worksheet, bloc.Row, bloc.Row + bloc.Rows.Count - 1
+        Next bloc
     End If
     Set zone = Application.Intersect(cible, cible.Worksheet.Range(cible.Worksheet.Cells(PREMIERE_LIGNE, 1), cible.Worksheet.Cells(DERNIERE_LIGNE_MAX, NB_COL)))
     If zone Is Nothing Then Exit Sub
@@ -890,7 +902,7 @@ Public Sub SupprimerDonnees()
     Application.EnableEvents = False
     ws.Range(ws.Cells(PREMIERE_LIGNE, 1), ws.Cells(DERNIERE_LIGNE_MAX, NB_COL)).ClearContents
     Application.EnableEvents = True
-    RemplirColonneR ws
+    MettreAJourColonneR ws
     EffacerMarques ws
     Set wd = FeuilleDossier(False)
     If Not wd Is Nothing Then wd.Cells.Clear

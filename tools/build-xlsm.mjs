@@ -346,7 +346,7 @@ zip.file('docProps/app.xml', '<?xml version="1.0" encoding="UTF-8" standalone="y
 
 // Légende (note de la cellule A1) : la couleur grise de la colonne R
 let cm = await zip.file('xl/comments1.xml').async('string');
-cm = cm.replace('titre en doublon : autorisé, à vérifier.', 'titre en doublon : autorisé, à vérifier.\n• Colonne R (grise) = remplie automatiquement (0), non modifiable.');
+cm = cm.replace('titre en doublon : autorisé, à vérifier.', 'titre en doublon : autorisé, à vérifier.\n• Colonne R (grise) = 0 ajouté automatiquement sur les lignes remplies, non modifiable.');
 zip.file('xl/comments1.xml', cm);
 
 const out = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
