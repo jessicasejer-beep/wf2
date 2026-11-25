@@ -5,6 +5,7 @@ Option Explicit
 
 Public Const NB_COL As Long = 23          ' colonnes A à W
 Public Const COL_UUID As Long = 23        ' W : toujours vide dans import.csv
+Public Const COL_METHODE As Long = 18     ' R : remplie automatiquement, toujours 0
 Public Const PREMIERE_LIGNE As Long = 2
 Public Const DERNIERE_LIGNE_MAX As Long = 2000   ' le modèle est préparé jusqu'à la ligne 2000
 Public Const AUTEUR_NOTE As String = "Contrôle import"
@@ -65,7 +66,7 @@ Public Function NomColonne(ByVal c As Long) As String
     NomColonne = Choose(c, "Nom du fichier (extension comprise)", "Titre de la ressource", "Titre alternatif", "Applet (0/1)", _
         "Niveau principal", "Sous-niveau", "Sous-sous-niveau", "Catégorie", "Description", "Picto", "Profil", _
         "Téléchargement autorisé (0/1)", "Audiodescription (.mp3)", "Sous-titres (.vtt)", "Transcription (.pdf/.doc)", "Langue", _
-        "Intégrale livre du prof. (0/1)", "Fichier présentation méthode (0/1)", "N° de page", "Miniature vidéo (.jpg 310×220)", _
+        "Intégrale livre du prof. (0/1)", "Fichier présentation méthode (automatique)", "N° de page", "Miniature vidéo (.jpg 310×220)", _
         "Watermark", "iFrame (L/H)", "uuid")
 End Function
 
@@ -108,13 +109,15 @@ Public Function TexteCellule(ByVal v As Variant) As String
     End If
 End Function
 
-' Dernière ligne remplie (colonnes A à V), au moins PREMIERE_LIGNE - 1
+' Dernière ligne remplie (colonnes A à V, sauf R toujours remplie), au moins PREMIERE_LIGNE - 1
 Public Function DerniereLigne(ws As Worksheet) As Long
     Dim c As Long, r As Long, m As Long
     m = PREMIERE_LIGNE - 1
     For c = 1 To NB_COL - 1
-        r = ws.Cells(ws.Rows.Count, c).End(xlUp).Row
-        If r > m Then m = r
+        If c <> COL_METHODE Then
+            r = ws.Cells(ws.Rows.Count, c).End(xlUp).Row
+            If r > m Then m = r
+        End If
     Next c
     If m > ws.Rows.Count - 1 Then m = PREMIERE_LIGNE - 1
     DerniereLigne = m
@@ -123,7 +126,9 @@ End Function
 Public Function LigneVide(donnees As Variant, ByVal r As Long) As Boolean
     Dim c As Long
     For c = 1 To NB_COL - 1
-        If TrimTout(TexteCellule(donnees(r, c))) <> "" Then Exit Function
+        If c <> COL_METHODE Then
+            If TrimTout(TexteCellule(donnees(r, c))) <> "" Then Exit Function
+        End If
     Next c
     LigneVide = True
 End Function
@@ -160,7 +165,9 @@ Public Function Controler(ws As Worksheet) As Long
     Dim nomsDossier As Collection, nbDossier As Long, listeDossier() As String
     Set nomsDossier = NomsDuDossier(listeDossier, nbDossier)
 
-    Dim fichiers As New Collection, titres As New Collection
+    Dim fichiers As Collection, titres As Collection
+    Set fichiers = New Collection
+    Set titres = New Collection
     ReDim v(1 To NB_COL)
     Dim liste As Variant, trouve As Boolean, i As Long, msg As String, groupe As String, sugg As String, cv As Variant
 
@@ -170,6 +177,7 @@ Public Function Controler(ws As Worksheet) As Long
             For c = 1 To NB_COL
                 If EstColonneFichier(c) Then v(c) = NormFichier(TexteCellule(donnees(r, c))) Else v(c) = NormTexte(TexteCellule(donnees(r, c)))
             Next c
+            v(COL_METHODE) = "0"     ' colonne R : toujours 0 à l'export
 
             ' Colonnes obligatoires
             For c = 1 To NB_COL
@@ -318,7 +326,8 @@ Public Function Controler(ws As Worksheet) As Long
     Next item
 
     ' Totaux
-    Dim lignesErr As New Collection
+    Dim lignesErr As Collection
+    Set lignesErr = New Collection
     nbErreurs = 0: nbAvertissements = 0
     For i = 1 To nbIss
         If issNiveau(i) = "warn" Then
@@ -459,22 +468,25 @@ End Function
 
 ' Noms du dossier lu : collection (clé = nom en minuscules, valeur = nom exact) + tableau 1..n
 Public Function NomsDuDossier(liste() As String, ByRef n As Long) As Collection
-    Dim res As New Collection, ws As Worksheet, derniere As Long, r As Long, nom As String
+    Dim res As Collection, ws As Worksheet, derniere As Long, r As Long, nom As String
+    Set res = New Collection
     n = 0
     ReDim liste(1 To 1)
     Set ws = FeuilleDossier(False)
     If Not ws Is Nothing Then
-        derniere = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        ' les noms sont écrits à la suite à partir de A2 : lecture jusqu'à la première cellule vide
+        derniere = 1
+        Do While CStr(ws.Cells(derniere + 1, 1).Value) <> ""
+            derniere = derniere + 1
+        Loop
         If derniere >= 2 Then
             ReDim liste(1 To derniere - 1)
             For r = 2 To derniere
                 nom = CStr(ws.Cells(r, 1).Value)
-                If nom <> "" Then
-                    n = n + 1: liste(n) = nom
-                    On Error Resume Next
-                    res.Add nom, LCase$(nom)
-                    On Error GoTo 0
-                End If
+                n = n + 1: liste(n) = nom
+                On Error Resume Next
+                res.Add nom, LCase$(nom)
+                On Error GoTo 0
             Next r
         End If
     End If

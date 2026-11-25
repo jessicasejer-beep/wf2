@@ -40,6 +40,15 @@ def check(cond, label, extra=""):
 print("■ Classeur livré")
 z = zipfile.ZipFile(os.path.join(ROOT, "Fichier-de-travail-import-WF.xlsm"))
 names = z.namelist()
+import xml.dom.minidom  # noqa: E402
+invalides = []
+for n in names:
+    if n.endswith((".xml", ".rels", ".vml")):
+        try:
+            xml.dom.minidom.parseString(z.read(n))
+        except Exception as e:  # XML mal formé : Excel déclarerait le fichier endommagé
+            invalides.append(f"{n} : {e}")
+check(not invalides, "toutes les parties XML sont bien formées", invalides)
 ct = z.read("[Content_Types].xml").decode()
 check("xl/vbaProject.bin" in names, "projet VBA présent")
 check("macroEnabled.main+xml" in ct and 'Extension="bin"' in ct, "type de classeur avec macros")
@@ -47,13 +56,29 @@ check("customUI/customUI.xml" in names and "ui/extensibility" in z.read("_rels/.
 check('activeTab="0"' in z.read("xl/workbook.xml").decode(), "onglet de travail actif à l'ouverture")
 check(sum(1 for n in names if n.startswith("xl/media/")) == 47, "images des pictos conservées")
 s1 = z.read("xl/worksheets/sheet1.xml").decode()
-check(s1.count("<dataValidation ") == 5 and s1.count("<conditionalFormatting") == 7, "listes déroulantes et couleurs du modèle conservées")
+check(s1.count("<dataValidation ") == 6 and s1.count("<conditionalFormatting") == 7, "listes déroulantes et couleurs du modèle conservées")
+check('sqref="R2:R2000"' in s1 and 'COUNTA($A2:$Q2,$S2:$V2)' in s1 and '<c r="R1" s="3"' in s1 and s1.count("<v>0</v></c>") >= 1999,
+      "colonne R : 0 partout, grisée, non modifiable ; règles de couleur sans R")
+check('sqref="F2' not in s1, "colonne F facultative (aucune règle de couleur)")
+wb = z.read("xl/workbook.xml").decode()
+import re  # noqa: E402
+check(re.findall(r'<sheet name="([^"]+)"', wb) == ["READ ME", "SC_import_modele_V1", "AIDE"], "onglets : READ ME, tableau, AIDE (pictos regroupés dans AIDE)", re.findall(r'<sheet name="([^"]+)"', wb))
+check('<definedName name="picto">AIDE!$B$59:$B$104</definedName>' in wb and 'localSheetId="1"' in wb, "listes déroulantes reliées à l'onglet AIDE")
+aide = z.read("xl/worksheets/sheet3.xml").decode()
+check('<c r="B59" s="' in aide and ">aide</t>" in aide and ">video_classe</t>" in aide and ">ANONYME</t>" in aide, "onglet AIDE : pictos et listes")
+check(z.read("xl/drawings/drawing1.xml").decode().count("<xdr:oneCellAnchor>") == 46, "46 images de pictos dans l'onglet AIDE")
+check("drawing1.xml" in z.read("xl/worksheets/_rels/sheet3.xml.rels").decode(), "dessin des pictos rattaché à AIDE")
+rm = z.read("xl/worksheets/sheet2.xml").decode()
+check("mode d&apos;emploi" in rm or "mode d'emploi" in rm, "onglet READ ME")
+ui = z.read("customUI/customUI.xml").decode()
+check('label="Sélectionner un dossier de ressources"' in ui and 'label="Vérifier un fichier"' in ui and 'label="Comparer le fichier et les ressources"' in ui and "Copier" not in ui,
+      "ruban : boutons renommés, comparaison ajoutée, copie du rapport retirée")
 from oletools.olevba import VBA_Parser  # noqa: E402
 
 vp = VBA_Parser(os.path.join(ROOT, "Fichier-de-travail-import-WF.xlsm"))
 mods = sorted(name for (_, _, name, _) in vp.extract_macros())
-check(mods == sorted(["Actions.bas", "ApiWindows.bas", "Feuil1.cls", "Feuil2.cls", "Feuil3.cls", "Outils.bas", "Regles.bas", "ThisWorkbook.cls"]),
-      "8 modules VBA relus par olevba", mods)
+check(mods == sorted(["Actions.bas", "ApiWindows.bas", "Comparaison.bas", "Feuil1.cls", "Feuil3.cls", "Feuil4.cls", "Outils.bas", "Regles.bas", "ThisWorkbook.cls"]),
+      "9 modules VBA relus par olevba", mods)
 check("TestsAuto" not in str(mods), "le module de test n'est pas livré")
 
 # --- Exécution dans LibreOffice ---------------------------------------------------------
@@ -127,6 +152,8 @@ run_suite("Contrôle par rapport au dossier", "TestsAuto", "TestDossier")
 run_suite("Aller-retour sur l'exemple import.csv", "TestsAuto", "TestCsv", os.path.join(ROOT, "ref/import.csv"))
 run_suite("Vérifier : couleurs, notes, feuille Contrôle", "TestsAuto", "TestVerifier")
 run_suite("Import d'un CSV et fichiers absents", "TestsAuto", "TestImport")
+run_suite("Colonne R automatique", "TestsAuto", "TestColonneR")
+run_suite("Comparer le fichier et les ressources", "TestsAuto", "TestComparaison")
 
 doc.close(True)
 try:

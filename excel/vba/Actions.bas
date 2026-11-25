@@ -1,7 +1,7 @@
 Attribute VB_Name = "Actions"
 ' Boutons du classeur (onglet « Import WebFactory » du ruban et feuille « Contrôle ») :
-' lire le dossier, importer un fichier, vérifier, copier le rapport, exporter import.csv,
-' supprimer les données.
+' sélectionner un dossier de ressources, vérifier un fichier, vérifier, comparer le fichier et
+' les ressources (module Comparaison), exporter import.csv, supprimer les données.
 Option Explicit
 
 Private Const NOM_CONTROLE As String = "Contrôle"
@@ -25,14 +25,14 @@ Public Sub Ruban_Clic(control As Object)
         Case "btnImporter": ImporterFichier
         Case "btnVerifier": Verifier
         Case "btnRapport": AfficherRapport
-        Case "btnCopier": CopierRapport
+        Case "btnComparer": ComparerFichierEtRessources
         Case "btnExporter": ExporterCsv
         Case "btnSupprimer": SupprimerDonnees
     End Select
 End Sub
 
 ' ---------------------------------------------------------------------------------------------
-' 1. Lire le dossier des fichiers
+' 1. Sélectionner un dossier de ressources
 ' ---------------------------------------------------------------------------------------------
 Public Sub LireDossier()
     Dim fd As Object, chemin As String, fso As Object
@@ -44,19 +44,20 @@ Public Sub LireDossier()
 
     Application.StatusBar = "Lecture du dossier…"
     Set fso = CreateObject("Scripting.FileSystemObject")
-    Dim noms As New Collection, nbSous As Long, nbIgnores As Long, nbDoublons As Long, exemple As String
-    Parcourir fso.GetFolder(chemin), "", noms, nbSous, nbIgnores, nbDoublons, exemple
+    Dim noms As Collection, nbSous As Long, nbIgnores As Long, nbDoublons As Long, exemple As String
+    Set noms = New Collection
+    ParcourirDossier fso.GetFolder(chemin), "", noms, nbSous, nbIgnores, nbDoublons, exemple
     Application.StatusBar = False
 
     Dim n As Long, t() As String, item As Variant
     n = noms.Count
     If n = 0 Then
         MsgBox "Le dossier « " & chemin & " » ne contient aucun fichier utilisable" & _
-            IIf(nbIgnores > 0, " (" & Pluriel(nbIgnores, "fichier système ignoré", "fichiers système ignorés") & ")", "") & ".", vbExclamation, "Lire le dossier"
+            IIf(nbIgnores > 0, " (" & Pluriel(nbIgnores, "fichier système ignoré", "fichiers système ignorés") & ")", "") & ".", vbExclamation, "Sélectionner un dossier de ressources"
         Exit Sub
     End If
     If n > DERNIERE_LIGNE_MAX - 1 Then
-        MsgBox "Le dossier contient " & n & " fichiers : le modèle accepte au maximum " & (DERNIERE_LIGNE_MAX - 1) & " ressources.", vbExclamation, "Lire le dossier"
+        MsgBox "Le dossier contient " & n & " fichiers : le modèle accepte au maximum " & (DERNIERE_LIGNE_MAX - 1) & " ressources.", vbExclamation, "Sélectionner un dossier de ressources"
         Exit Sub
     End If
     ReDim t(1 To n)
@@ -97,19 +98,19 @@ Public Sub LireDossier()
         EcrireNoms ws, PREMIERE_LIGNE, t, n
         Verifier False
         MsgBox "Dossier « " & chemin & " » : " & Pluriel(n, "fichier lu", "fichiers lus") & ", " & Pluriel(n, "ligne créée", "lignes créées") & " (une par fichier)." & infos & vbLf & vbLf & _
-            "Complétez maintenant le tableau, puis cliquez sur « Vérifier ».", vbInformation, "Lire le dossier"
+            "Complétez maintenant le tableau, puis cliquez sur « Vérifier ».", vbInformation, "Sélectionner un dossier de ressources"
     Else
         Dim absents As Variant, nAbs As Long, rep As VbMsgBoxResult
         absents = FichiersAbsents(ws, t, n, nAbs)
         If nAbs = 0 Then
             Verifier False
             MsgBox "Dossier « " & chemin & " » : " & Pluriel(n, "fichier lu", "fichiers lus") & "." & infos & vbLf & vbLf & _
-                "Tous les fichiers du dossier sont déjà dans le tableau. Le contrôle des noms a été fait : voir l'onglet « Contrôle ».", vbInformation, "Lire le dossier"
+                "Tous les fichiers du dossier sont déjà dans le tableau. Le contrôle des noms a été fait : voir l'onglet « Contrôle ».", vbInformation, "Sélectionner un dossier de ressources"
         Else
             rep = MsgBox("Dossier « " & chemin & " » : " & Pluriel(n, "fichier lu", "fichiers lus") & "." & infos & vbLf & vbLf & _
                 "Le tableau contient déjà " & Pluriel(nbExistants, "ressource", "ressources") & " et " & Pluriel(nAbs, "fichier du dossier n'y est pas", "fichiers du dossier n'y sont pas") & "." & vbLf & vbLf & _
                 "Oui : ajouter ces " & nAbs & " fichiers à la fin du tableau." & vbLf & _
-                "Non : ne rien ajouter, utiliser le dossier seulement pour contrôler les noms.", vbYesNoCancel + vbQuestion, "Lire le dossier")
+                "Non : ne rien ajouter, utiliser le dossier seulement pour contrôler les noms.", vbYesNoCancel + vbQuestion, "Sélectionner un dossier de ressources")
             If rep = vbCancel Then Exit Sub
             If rep = vbYes Then EcrireNoms ws, derniere + 1, absents, nAbs
             Verifier
@@ -124,7 +125,7 @@ Private Function Ignorer(ByVal nom As String) As Boolean
     If Left$(nom, 1) = "." Or Left$(nom, 2) = "~$" Then Ignorer = True
 End Function
 
-Private Sub Parcourir(dossier As Object, ByVal prefixe As String, noms As Collection, ByRef nbSous As Long, ByRef nbIgnores As Long, ByRef nbDoublons As Long, ByRef exemple As String)
+Public Sub ParcourirDossier(dossier As Object, ByVal prefixe As String, noms As Collection, ByRef nbSous As Long, ByRef nbIgnores As Long, ByRef nbDoublons As Long, ByRef exemple As String)
     Dim f As Object, sd As Object, nom As String
     For Each f In dossier.Files
         nom = NFC(f.Name)
@@ -146,7 +147,7 @@ Private Sub Parcourir(dossier As Object, ByVal prefixe As String, noms As Collec
         If sd.Name = "__MACOSX" Or Left$(sd.Name, 1) = "." Then
             nbIgnores = nbIgnores + sd.Files.Count
         Else
-            Parcourir sd, prefixe & sd.Name & "/", noms, nbSous, nbIgnores, nbDoublons, exemple
+            ParcourirDossier sd, prefixe & sd.Name & "/", noms, nbSous, nbIgnores, nbDoublons, exemple
         End If
     Next sd
 End Sub
@@ -167,7 +168,8 @@ End Sub
 
 ' Fichiers du dossier qui ne figurent dans aucune colonne de nom de fichier du tableau
 Private Function FichiersAbsents(ws As Worksheet, t As Variant, ByVal n As Long, ByRef nAbs As Long) As Variant
-    Dim presents As New Collection, derniere As Long, donnees As Variant, r As Long, c As Variant, nom As String
+    Dim presents As Collection, derniere As Long, donnees As Variant, r As Long, c As Variant, nom As String
+    Set presents = New Collection
     Dim res() As String, i As Long, ok As Boolean, v As String
     derniere = DerniereLigne(ws)
     If derniere >= PREMIERE_LIGNE Then
@@ -210,11 +212,11 @@ Public Sub AjouterFichiersAbsents()
 End Sub
 
 ' ---------------------------------------------------------------------------------------------
-' Importer un fichier Excel ou CSV existant
+' Vérifier un fichier : reprendre un fichier Excel ou CSV existant dans le tableau, puis le contrôler
 ' ---------------------------------------------------------------------------------------------
 Public Sub ImporterFichier()
     Dim f As Variant, ws As Worksheet, matrice As Collection, sepNom As String, ou As String
-    f = Application.GetOpenFilename("Fichier d'import (*.csv;*.txt;*.xlsx;*.xlsm;*.xls),*.csv;*.txt;*.xlsx;*.xlsm;*.xls", , "Importer un fichier Excel ou CSV")
+    f = Application.GetOpenFilename("Fichier d'import (*.csv;*.txt;*.xlsx;*.xlsm;*.xls),*.csv;*.txt;*.xlsx;*.xlsm;*.xls", , "Vérifier un fichier Excel ou CSV")
     If VarType(f) = vbBoolean Then Exit Sub
     If LCase$(CStr(f)) = LCase$(ThisWorkbook.FullName) Then
         MsgBox "Ce fichier est le classeur ouvert : choisissez un autre fichier.", vbExclamation: Exit Sub
@@ -224,12 +226,7 @@ Public Sub ImporterFichier()
     Dim ext As String
     ext = Extension(CStr(f))
     On Error GoTo Illisible
-    If ext = "xlsx" Or ext = "xlsm" Or ext = "xls" Then
-        Set matrice = LireClasseur(CStr(f), ou)
-    Else
-        Set matrice = LireCsv(LireTexte(CStr(f)), sepNom)
-        ou = "séparateur " & sepNom
-    End If
+    Set matrice = LireFichierImport(CStr(f), ou)
     On Error GoTo 0
 
     Dim lignes As Collection, notes As String
@@ -237,25 +234,26 @@ Public Sub ImporterFichier()
     If lignes.Count = 0 Then MsgBox "« " & f & " » ne contient aucune ressource.", vbExclamation: Exit Sub
     If lignes.Count > DERNIERE_LIGNE_MAX - 1 Then MsgBox "Le fichier contient " & lignes.Count & " ressources : le modèle en accepte au maximum " & (DERNIERE_LIGNE_MAX - 1) & ".", vbExclamation: Exit Sub
     If DerniereLigne(ws) >= PREMIERE_LIGNE Then
-        If MsgBox("Remplacer le contenu actuel du tableau par les " & lignes.Count & " ressources de « " & NomSeul(CStr(f)) & " » ?", vbYesNo + vbQuestion, "Importer") <> vbYes Then Exit Sub
+        If MsgBox("Remplacer le contenu actuel du tableau par les " & lignes.Count & " ressources de « " & NomSeul(CStr(f)) & " » ?", vbYesNo + vbQuestion, "Vérifier un fichier") <> vbYes Then Exit Sub
     End If
 
     EcrireLignes ws, lignes
     ThisWorkbook.Names.Add Name:="_dernier_import", RefersTo:="=""" & Replace(NomSeul(CStr(f)), """", "") & " (" & ou & "), " & MaintenantTexte() & """", Visible:=False
     Verifier False
     MsgBox Pluriel(lignes.Count, "ressource importée", "ressources importées") & " depuis « " & NomSeul(CStr(f)) & " » (" & ou & ")." & notes & vbLf & vbLf & _
-        "Le résultat du contrôle est dans l'onglet « Contrôle ».", vbInformation, "Importer"
+        "Le résultat du contrôle est dans l'onglet « Contrôle ».", vbInformation, "Vérifier un fichier"
     Exit Sub
 Illisible:
     Application.EnableEvents = True
     Application.ScreenUpdating = True
-    MsgBox "« " & f & " » n'a pas pu être lu (" & Err.Description & ").", vbExclamation, "Importer"
+    MsgBox "« " & f & " » n'a pas pu être lu (" & Err.Description & ").", vbExclamation, "Vérifier un fichier"
 End Sub
 
 ' Lignes à importer : en-tête reconnu, lignes vides et valeurs uuid ignorées (notes = explications)
 Public Function PreparerLignes(matrice As Collection, ByRef notes As String) As Collection
     Dim debut As Long, ligne As Collection, nbUuid As Long, nbVides As Long, nbTrop As Long
-    Dim lignes As New Collection, c As Long, vide As Boolean, i As Long
+    Dim lignes As Collection, c As Long, vide As Boolean, i As Long
+    Set lignes = New Collection
     debut = 1
     If matrice.Count > 0 Then
         If matrice(1).Count > 0 Then
@@ -315,8 +313,18 @@ Public Sub EcrireLignes(ws As Worksheet, lignes As Collection)
         Next r
         ws.Range(ws.Cells(PREMIERE_LIGNE, 1), ws.Cells(PREMIERE_LIGNE + lignes.Count - 1, NB_COL - 1)).Value = arr
     End If
+    RemplirColonneR ws
     Application.EnableEvents = True
     Application.ScreenUpdating = True
+End Sub
+
+' Colonne R (fichier lié à la présentation de la méthode) : toujours 0, sur toutes les lignes
+Public Sub RemplirColonneR(ws As Worksheet)
+    Dim evenements As Boolean
+    evenements = Application.EnableEvents
+    Application.EnableEvents = False
+    ws.Range(ws.Cells(PREMIERE_LIGNE, COL_METHODE), ws.Cells(DERNIERE_LIGNE_MAX, COL_METHODE)).Value = 0
+    Application.EnableEvents = evenements
 End Sub
 
 ' Valeur à écrire dans une cellule du modèle (texte, ou nombre pour les colonnes 0/1)
@@ -334,6 +342,18 @@ End Function
 
 Private Function NomSeul(ByVal chemin As String) As String
     NomSeul = Mid$(chemin, InStrRev(Replace(chemin, "/", "\"), "\") + 1)
+End Function
+
+' Lignes d'un fichier d'import : classeur Excel ou CSV (ou = onglet ou séparateur reconnu)
+Public Function LireFichierImport(ByVal chemin As String, ByRef ou As String) As Collection
+    Dim ext As String, sepNom As String
+    ext = Extension(chemin)
+    If ext = "xlsx" Or ext = "xlsm" Or ext = "xls" Then
+        Set LireFichierImport = LireClasseur(chemin, ou)
+    Else
+        Set LireFichierImport = LireCsv(LireTexte(chemin), sepNom)
+        ou = "séparateur " & sepNom
+    End If
 End Function
 
 ' Texte d'un fichier : UTF-8 (avec ou sans BOM) sinon Windows-1252
@@ -360,7 +380,8 @@ End Function
 
 ' Lignes d'un classeur : onglet dont la cellule A1 commence par « Nom du fichier »
 Private Function LireClasseur(ByVal chemin As String, ByRef ou As String) As Collection
-    Dim wb As Workbook, sh As Worksheet, trouve As Worksheet, donnees As Variant, res As New Collection
+    Dim wb As Workbook, sh As Worksheet, trouve As Worksheet, donnees As Variant, res As Collection
+    Set res = New Collection
     Dim r As Long, c As Long, ligne As Collection, derniere As Range
     Dim securite As Long
     Application.ScreenUpdating = False
@@ -416,8 +437,11 @@ End Sub
 ' Couleurs et notes sur les cellules en erreur (les marques précédentes sont effacées)
 Private Sub Marquer(ws As Worksheet)
     EffacerMarques ws
-    Dim i As Long, cle As String, niveaux As New Collection, textes As New Collection, rang As Long, ancien As Long
-    Dim cellule As Range, cles As New Collection
+    Dim i As Long, cle As String, niveaux As Collection, textes As Collection, rang As Long, ancien As Long
+    Set niveaux = New Collection
+    Set textes = New Collection
+    Dim cellule As Range, cles As Collection
+    Set cles = New Collection
     For i = 1 To nbIss
         cle = issLigne(i) & "_" & issCol(i)
         rang = IIf(issNiveau(i) = "err", 3, IIf(issNiveau(i) = "dup", 2, 1))
@@ -473,7 +497,20 @@ End Sub
 ' Appelé quand une cellule du tableau est modifiée : retire sa couleur et sa note de contrôle,
 ' devenues obsolètes. (Seulement si la cellule était marquée, pour garder Ctrl+Z ailleurs.)
 Public Sub RetirerMarquesModifiees(ByVal cible As Range)
-    Dim zone As Range, cellule As Range, n As Long
+    Dim zone As Range, cellule As Range, n As Long, zoneR As Range
+    ' Colonne R : non modifiable, toujours 0
+    Set zoneR = Application.Intersect(cible, cible.Worksheet.Range(cible.Worksheet.Cells(PREMIERE_LIGNE, COL_METHODE), cible.Worksheet.Cells(DERNIERE_LIGNE_MAX, COL_METHODE)))
+    If Not zoneR Is Nothing Then
+        If zoneR.CountLarge <= 5000 Then
+            For Each cellule In zoneR.Cells
+                If CStr(cellule.Value) <> "0" Then
+                    Application.EnableEvents = False
+                    cellule.Value = 0
+                    Application.EnableEvents = True
+                End If
+            Next cellule
+        End If
+    End If
     Set zone = Application.Intersect(cible, cible.Worksheet.Range(cible.Worksheet.Cells(PREMIERE_LIGNE, 1), cible.Worksheet.Cells(DERNIERE_LIGNE_MAX, NB_COL)))
     If zone Is Nothing Then Exit Sub
     If zone.CountLarge > 5000 Then Exit Sub
@@ -514,9 +551,8 @@ Private Function FeuilleControle() As Worksheet
         ws.Columns("A:C").VerticalAlignment = xlTop
         ws.Rows("3:4").RowHeight = 18
         AjouterBouton ws, "btnVerifier", "Vérifier", "Verifier", 4, RGB(11, 92, 173)
-        AjouterBouton ws, "btnCopier", "Copier le rapport d'erreurs", "CopierRapport", 120, RGB(192, 0, 0)
-        AjouterBouton ws, "btnExporter", "Exporter import.csv", "ExporterCsv", 300, RGB(30, 123, 60)
-        AjouterBouton ws, "btnRetour", "Retour au tableau", "RetourTableau", 450, RGB(90, 97, 112)
+        AjouterBouton ws, "btnExporter", "Exporter import.csv", "ExporterCsv", 120, RGB(30, 123, 60)
+        AjouterBouton ws, "btnRetour", "Retour au tableau", "RetourTableau", 270, RGB(90, 97, 112)
         If Not actif Is Nothing Then actif.Activate
     End If
     Set FeuilleControle = ws
@@ -610,7 +646,7 @@ Private Function TitreRapport() As String
     ElseIf nbRessources > 0 Then
         TitreRapport = "Aucune erreur bloquante : " & Pluriel(nbRessources, "ressource prête", "ressources prêtes") & " pour import.csv"
     Else
-        TitreRapport = "Le tableau est vide : cliquez sur « Lire le dossier » ou « Importer un fichier »."
+        TitreRapport = "Le tableau est vide : cliquez sur « Sélectionner un dossier de ressources » ou « Vérifier un fichier »."
     End If
 End Function
 
@@ -719,11 +755,11 @@ Public Function FichiersAbsentsPublic(ws As Worksheet, t As Variant, ByVal n As 
 End Function
 
 Private Function InfoSources() As String
-    Dim wd As Worksheet, s As String, n As Long, nm As Name
+    Dim wd As Worksheet, s As String, n As Long, nm As Name, liste() As String
     Set wd = FeuilleDossier(False)
     If Not wd Is Nothing Then
         If CStr(wd.Range("A1").Value) <> "" Then
-            n = wd.Cells(wd.Rows.Count, 1).End(xlUp).Row - 1
+            NomsDuDossier liste, n
             s = "Dernier dossier lu : « " & wd.Range("A1").Value & " » (" & Pluriel(n, "fichier", "fichiers") & ", le " & Format$(wd.Range("B1").Value, "dd/mm/yyyy à hh:nn") & ")."
         End If
     End If
@@ -734,37 +770,9 @@ Private Function InfoSources() As String
         If s <> "" Then s = s & "   "
         s = s & "Dernier fichier importé : " & Mid$(nm.RefersTo, 3, Len(nm.RefersTo) - 3) & "."
     End If
-    If s = "" Then s = "Aucun dossier lu : le contrôle de l'existence des fichiers est fait seulement après « Lire le dossier »."
+    If s = "" Then s = "Aucun dossier lu : le contrôle de l'existence des fichiers est fait seulement après « Sélectionner un dossier de ressources »."
     InfoSources = s
 End Function
-
-' ---------------------------------------------------------------------------------------------
-' Copier le rapport (texte identique à la feuille « Contrôle » : titre + erreurs regroupées)
-' ---------------------------------------------------------------------------------------------
-Public Function TexteRapport() As String
-    Dim t As String, g As Long, nG As Long
-    Dim gLabel() As String, gNombre() As Long, gLignes() As String, gNbLignes() As Long, gPremier() As Long, gPremiereCol() As Long
-    t = TitreRapport()
-    If nbErreurs > 0 Then
-        t = t & vbCrLf
-        CalculerGroupes "err", nG, gLabel, gNombre, gLignes, gNbLignes, gPremier, gPremiereCol
-        For g = 1 To nG
-            t = t & vbCrLf & Pluriel(gNombre(g), "erreur", "erreurs") & " · " & gLabel(g) & " : " & gLignes(g)
-        Next g
-    End If
-    TexteRapport = t
-End Function
-
-Public Sub CopierRapport()
-    Verifier False
-    Dim t As String
-    t = TexteRapport()
-    If CopierDansPressePapiers(t) Then
-        MsgBox "Rapport copié : collez-le avec Ctrl+V dans un e-mail ou un message." & vbLf & vbLf & t, vbInformation, "Copier le rapport d'erreurs"
-    Else
-        InputBox "La copie automatique n'a pas fonctionné. Sélectionnez le texte ci-dessous et copiez-le avec Ctrl+C :", "Copier le rapport d'erreurs", Replace(t, vbCrLf, " | ")
-    End If
-End Sub
 
 ' ---------------------------------------------------------------------------------------------
 ' 3. Exporter import.csv (séparateur ¤, Latin-1, fins de ligne CRLF, 23 colonnes)
@@ -782,6 +790,8 @@ Public Function TexteCsv(ws As Worksheet) As String
             For c = 1 To NB_COL
                 If c = COL_UUID Then
                     cellules(c) = ""
+                ElseIf c = COL_METHODE Then
+                    cellules(c) = "0"            ' colonne R : toujours 0
                 ElseIf EstColonneFichier(c) Then
                     cellules(c) = NormFichier(TexteCellule(donnees(r, c)))
                 Else
@@ -872,7 +882,7 @@ End Sub
 ' Supprimer les données (pour commencer un nouvel import)
 ' ---------------------------------------------------------------------------------------------
 Public Sub SupprimerDonnees()
-    If MsgBox("Supprimer toutes les données du tableau, le dossier lu et le rapport de contrôle, pour commencer un nouvel import ?" & vbLf & vbLf & _
+    If MsgBox("Supprimer toutes les données du tableau, le dossier lu, le rapport de contrôle et la comparaison, pour commencer un nouvel import ?" & vbLf & vbLf & _
         "Cette action est définitive (enregistrez une copie du classeur avant si vous voulez garder ce travail).", vbYesNo + vbExclamation + vbDefaultButton2, "Supprimer les données") <> vbYes Then Exit Sub
     Dim ws As Worksheet, wd As Worksheet, wc As Worksheet
     Application.ScreenUpdating = False
@@ -880,12 +890,22 @@ Public Sub SupprimerDonnees()
     Application.EnableEvents = False
     ws.Range(ws.Cells(PREMIERE_LIGNE, 1), ws.Cells(DERNIERE_LIGNE_MAX, NB_COL)).ClearContents
     Application.EnableEvents = True
+    RemplirColonneR ws
     EffacerMarques ws
     Set wd = FeuilleDossier(False)
     If Not wd Is Nothing Then wd.Cells.Clear
     On Error Resume Next
     ThisWorkbook.Names("_dernier_import").Delete
     Set wc = ThisWorkbook.Worksheets(NOM_CONTROLE)
+    On Error GoTo 0
+    If Not wc Is Nothing Then
+        Application.DisplayAlerts = False
+        wc.Delete
+        Application.DisplayAlerts = True
+    End If
+    Set wc = Nothing
+    On Error Resume Next
+    Set wc = ThisWorkbook.Worksheets("Comparaison")
     On Error GoTo 0
     If Not wc Is Nothing Then
         Application.DisplayAlerts = False

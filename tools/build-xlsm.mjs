@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { ajouterStyles, adapterFeuilleTravail, feuilleAide, dessinPictosAide, feuilleReadMe, LISTES_AIDE } from './xlsm-feuilles.mjs';
 import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -213,7 +214,7 @@ function instrument(src, name) {
 
 /* ---------- Projet VBA ---------- */
 function buildVbaProject() {
-  const order = ['ThisWorkbook', 'Feuil1', 'Feuil2', 'Feuil3', 'ApiWindows', 'Outils', 'Regles', 'Actions'];
+  const order = ['ThisWorkbook', 'Feuil1', 'Feuil3', 'Feuil4', 'ApiWindows', 'Outils', 'Regles', 'Actions', 'Comparaison'];
   if (WITH_TESTS) order.push('TestsAuto');
   const dirs = [VBA_DIR, join(root, 'excel/vba-tests')];
   const modules = order.map(name => {
@@ -278,18 +279,18 @@ const CUSTOM_UI = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <tabs>
       <tab id="tabImportWF" label="Import WebFactory" insertBeforeMso="TabHome">
         <group id="grpDepart" label="1. Point de départ">
-          ${btn('btnDossier', 'Lire le dossier', 'FileOpen', "Choisir le dossier des fichiers à importer : une ligne par fichier, ou contrôle des noms si le tableau est déjà rempli.")}
-          ${btn('btnImporter', 'Importer un fichier', 'ImportTextFile', "Reprendre un import.csv ou un fichier de travail Excel existant.")}
+          ${btn('btnDossier', 'Sélectionner un dossier de ressources', 'FileOpen', "Choisir le dossier des fichiers à importer : une ligne par fichier, ou contrôle des noms si le tableau est déjà rempli.")}
+          ${btn('btnImporter', 'Vérifier un fichier', 'ImportTextFile', "Charger un import.csv ou un fichier de travail Excel existant dans le tableau, puis le contrôler.")}
         </group>
         <group id="grpControle" label="2. Contrôle">
           ${btn('btnVerifier', 'Vérifier', 'DataValidation', "Contrôler toutes les lignes : cellules en couleur avec une note, rapport dans l'onglet Contrôle.")}
-          ${btn('btnCopier', "Copier le rapport d'erreurs", 'Copy', "Copier le rapport (erreurs regroupées par type) pour le coller dans un e-mail ou un message.")}
+          ${btn('btnComparer', 'Comparer le fichier et les ressources', 'ReviewCompareMenu', "Comparer un fichier d'import (Excel ou CSV) et un dossier de fichiers médias : même nombre de fichiers, noms identiques.")}
         </group>
         <group id="grpExport" label="3. Export">
           ${btn('btnExporter', 'Exporter import.csv', 'FileSaveAs', "Enregistrer import.csv (séparateur ¤, Latin-1) s'il n'y a plus d'erreur bloquante.")}
         </group>
         <group id="grpDonnees" label="Données">
-          ${btn('btnSupprimer', 'Supprimer les données', 'ClearAll', "Vider le tableau, le dossier lu et le rapport pour commencer un nouvel import.")}
+          ${btn('btnSupprimer', 'Supprimer les données', 'ClearAll', "Vider le tableau, le dossier lu et les rapports pour commencer un nouvel import.")}
         </group>
       </tab>
     </tabs>
@@ -316,16 +317,37 @@ rels = rels.replace('</Relationships>', '<Relationship Id="rIdUI" Type="http://s
 zip.file('_rels/.rels', rels);
 zip.file('customUI/customUI.xml', CUSTOM_UI);
 
-// L'onglet de travail est l'onglet actif à l'ouverture
+// Styles, onglet de travail, onglets AIDE (avec les pictos) et READ ME
+const st = ajouterStyles(await zip.file('xl/styles.xml').async('string'));
+zip.file('xl/styles.xml', st.xml);
+zip.file('xl/worksheets/sheet1.xml', adapterFeuilleTravail(await zip.file('xl/worksheets/sheet1.xml').async('string'), st.S));
+zip.file('xl/worksheets/sheet3.xml', feuilleAide(st.S));            // AIDE (remplace l'ancien onglet AIDE)
+zip.file('xl/worksheets/sheet2.xml', feuilleReadMe(st.S));          // READ ME (remplace l'onglet pictos)
+zip.file('xl/worksheets/_rels/sheet3.xml.rels', zip.file('xl/worksheets/_rels/sheet2.xml.rels') ? await zip.file('xl/worksheets/_rels/sheet2.xml.rels').async('string') : '');
+zip.file('xl/worksheets/_rels/sheet2.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>');   // READ ME : sans dessin
+zip.file('xl/drawings/drawing1.xml', dessinPictosAide(await zip.file('xl/drawings/drawing1.xml').async('string')));
+
+// Ordre des onglets : READ ME, tableau, AIDE ; plages nommées des listes déroulantes dans AIDE
+const plage = ([a, b]) => `AIDE!$B$${a}:$B$${b}`;
 let wbx = await zip.file('xl/workbook.xml').async('string');
+wbx = wbx.replace(/<sheets>[\s\S]*?<\/sheets>/, '<sheets><sheet name="READ ME" sheetId="2" r:id="rId2"/><sheet name="SC_import_modele_V1" sheetId="1" r:id="rId1"/><sheet name="AIDE" sheetId="3" r:id="rId3"/></sheets>');
+wbx = wbx.replace(/<definedNames>[\s\S]*?<\/definedNames>/, '<definedNames>'
+  + '<definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">SC_import_modele_V1!$A$1:$W$1</definedName>'
+  + '<definedName name="_xlnm.Print_Titles" localSheetId="1">SC_import_modele_V1!$1:$1</definedName>'
+  + `<definedName name="langue_v2">${plage(LISTES_AIDE.langue)}</definedName>`
+  + `<definedName name="picto">${plage(LISTES_AIDE.picto)}</definedName>`
+  + `<definedName name="profil">${plage(LISTES_AIDE.profil)}</definedName>`
+  + `<definedName name="watermark">${plage(LISTES_AIDE.watermark)}</definedName>`
+  + `<definedName name="zeroun">${plage(LISTES_AIDE.zeroun)}</definedName>`
+  + '</definedNames>');
 wbx = wbx.replace(/activeTab="\d+"/, 'activeTab="0"');
 zip.file('xl/workbook.xml', wbx);
-let s1 = await zip.file('xl/worksheets/sheet1.xml').async('string');
-s1 = s1.replace(/<sheetView(?=[\s>])(?![^>]*tabSelected)/, '<sheetView tabSelected="1"');
-zip.file('xl/worksheets/sheet1.xml', s1);
-for (const p of ['xl/worksheets/sheet2.xml', 'xl/worksheets/sheet3.xml']) {
-  zip.file(p, (await zip.file(p).async('string')).replace(/ tabSelected="1"/g, ''));
-}
+zip.file('docProps/app.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>');
+
+// Légende (note de la cellule A1) : la couleur grise de la colonne R
+let cm = await zip.file('xl/comments1.xml').async('string');
+cm = cm.replace('titre en doublon : autorisé, à vérifier.', 'titre en doublon : autorisé, à vérifier.\n• Colonne R (grise) = remplie automatiquement (0), non modifiable.');
+zip.file('xl/comments1.xml', cm);
 
 const out = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 writeFileSync(OUT, out);

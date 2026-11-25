@@ -105,7 +105,8 @@ End Function
 
 ' Liste « « x » (U+XXXX) » des caractères au-dessus de 127 (ou 255), sans doublon
 Public Function CaracteresHors(ByVal s As String, ByVal limite As Long) As Collection
-    Dim res As New Collection, i As Long, ch As String, deja As String
+    Dim res As Collection, i As Long, ch As String, deja As String
+    Set res = New Collection
     For i = 1 To Len(s)
         ch = Mid$(s, i, 1)
         If CodeCar(ch) > limite Then
@@ -241,7 +242,8 @@ End Sub
 ' Lit un texte CSV : séparateur ¤ (sans guillemets) ou ; , tabulation (avec guillemets).
 ' Renvoie une collection de lignes, chaque ligne étant une collection de cellules.
 Public Function LireCsv(ByVal texte As String, ByRef sepNom As String) As Collection
-    Dim lignes As New Collection, sep As String, premiere As String, p As Long
+    Dim lignes As Collection, sep As String, premiere As String, p As Long
+    Set lignes = New Collection
     Dim nbTab As Long, nbPv As Long, nbV As Long
     p = InStr(texte, vbLf)
     If p > 0 Then premiere = Left$(texte, p) Else premiere = texte

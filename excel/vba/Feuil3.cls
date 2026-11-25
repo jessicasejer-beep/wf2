@@ -7,3 +7,5 @@ Attribute VB_Exposed = True
 Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
+
+' Onglet « AIDE » (colonnes, valeurs autorisées, pictos)

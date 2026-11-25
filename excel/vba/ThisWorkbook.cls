@@ -8,9 +8,16 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
+' À l'ouverture : le mode d'emploi si le tableau est vide, sinon le tableau
 Private Sub Workbook_Open()
     On Error Resume Next
-    FeuilleTravail().Activate
-    Application.StatusBar = "Import WebFactory : utilisez l'onglet « Import WebFactory » du ruban (Lire le dossier, Vérifier, Exporter import.csv)."
+    Dim ws As Worksheet
+    Set ws = FeuilleTravail()
+    If DerniereLigne(ws) < PREMIERE_LIGNE Then
+        ThisWorkbook.Worksheets("READ ME").Activate
+    Else
+        ws.Activate
+    End If
+    Application.StatusBar = "Import WebFactory : toutes les actions sont dans l'onglet « Import WebFactory » du ruban. Mode d'emploi : onglet « READ ME »."
     Application.OnTime Now + TimeValue("00:00:10"), "EffacerBarreEtat"
 End Sub

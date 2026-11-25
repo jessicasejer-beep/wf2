@@ -32,18 +32,20 @@ espaces de début et de fin supprimés). Colonnes de noms de fichiers (1, 13, 14
 ## Version Excel avec macros
 
 `Fichier-de-travail-import-WF.xlsm` : le modèle Excel, avec les mêmes règles que l'outil web,
-pour les postes Windows avec Excel installé et macros autorisées. Un onglet **Import WebFactory**
-du ruban regroupe les actions : Lire le dossier, Importer un fichier, Vérifier, Copier le rapport
-d'erreurs, Exporter import.csv, Supprimer les données. Le résultat du contrôle s'affiche dans
-l'onglet « Contrôle » (erreurs regroupées par type) et sur les cellules (couleur + note).
+pour les postes Windows avec Excel installé et macros autorisées. Onglets : **READ ME** (mode
+d'emploi), **SC_import_modele_V1** (le tableau ; colonne R automatique, toujours 0) et **AIDE**
+(colonnes, valeurs autorisées, pictos avec leur image). L'onglet **Import WebFactory** du ruban
+regroupe les actions : Sélectionner un dossier de ressources, Vérifier un fichier, Vérifier,
+Comparer le fichier et les ressources, Exporter import.csv, Supprimer les données. Les résultats
+s'affichent dans les onglets « Contrôle » et « Comparaison », et sur les cellules (couleur + note).
 
 | Fichier | Rôle |
 |---|---|
 | `excel/vba/*.bas`, `*.cls` | Code VBA (lisible, modifiable) |
-| `tools/build-xlsm.mjs` | Construit le `.xlsm` : modèle + code VBA + onglet du ruban |
+| `tools/build-xlsm.mjs`, `tools/xlsm-feuilles.mjs` | Construisent le `.xlsm` : modèle + code VBA + ruban + onglets READ ME et AIDE |
 | `excel/vba-tests/TestsAuto.bas` | Tests des règles (non livré dans le classeur) |
-| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (78 vérifications) |
-| `excel/RECETTE.md` | Essai à faire dans Excel, avec le dossier `excel/recette/Lot_essai` |
+| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (105 vérifications) |
+| `excel/RECETTE.md` | Essai à faire dans Excel, avec les dossiers de `excel/recette/` |
 
 ```sh
 (cd tools && npm install)     # une fois

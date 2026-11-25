@@ -48,6 +48,18 @@ Private Function A(ByVal ligne As Long, ByVal col As Long, ByVal typ As String, 
     Next i
 End Function
 
+' Rapport de l'onglet « Contrôle » (titre + une ligne par groupe), après « Vérifier »
+Private Function RapportControle() As String
+    Dim wc As Worksheet, r As Long, t As String
+    Verifier False
+    Set wc = ThisWorkbook.Worksheets("Contrôle")
+    t = wc.Range("A6").Value
+    For r = 10 To 80
+        If wc.Cells(r, 2).Value <> "" Then t = t & vbLf & wc.Cells(r, 1).Value & " · " & wc.Cells(r, 2).Value & " : " & wc.Cells(r, 3).Value
+    Next r
+    RapportControle = t
+End Function
+
 Private Function NbIssLigne(ByVal ligne As Long, ByVal niveau As String) As Long
     Dim i As Long
     For i = 1 To nbIss
@@ -156,11 +168,14 @@ Public Function TestControle() As String
     Call Verif(NbIssLigne(21, "") = 0, "iFrame 800/600 accepté")
     Call Verif(nbRessources = 20, "20 ressources comptées (" & nbRessources & ")")
     Call Verif(nbErreurs > 0 And nbAvertissements > 0, "totaux")
-    Call Verif(TexteRapport() Like "* erreurs bloquantes sur * lignes : import.csv ne peut pas encore être exporté*", "titre du rapport")
-    Call Verif(InStr(TexteRapport(), "erreurs · Colonne obligatoire vide : ") > 0 Or InStr(TexteRapport(), "erreur · Colonne obligatoire vide : ") > 0, "groupe « Colonne obligatoire vide »")
-    Call Verif(InStr(TexteRapport(), "L19 (Nom du fichier, Titre, Niveau principal, Catégorie, Picto, Profil, Téléchargement, Langue, Intégrale prof., Méthode)") > 0, "colonnes manquantes par ligne")
-    Call Verif(InStr(TexteRapport(), "2 erreurs · Nom du fichier en double : interdit, chaque fichier ne doit apparaître qu'une fois : L2, L4") > 0, "groupe doublons L2, L4")
-    TestControle = Fin() & vbLf & "--- Rapport ---" & vbLf & TexteRapport()
+    Dim rap As String
+    etape = "RapportControle"
+    rap = RapportControle()
+    Call Verif(rap Like "* erreurs bloquantes sur * lignes : import.csv ne peut pas encore être exporté*", "titre du rapport")
+    Call Verif(InStr(rap, "erreurs · Colonne obligatoire vide : ") > 0, "groupe « Colonne obligatoire vide »")
+    Call Verif(InStr(rap, "L19 (Nom du fichier, Titre, Niveau principal, Catégorie, Picto, Profil, Téléchargement, Langue, Intégrale prof.)") > 0, "colonnes manquantes par ligne (sans la colonne R, automatique)")
+    Call Verif(InStr(rap, "2 erreurs · Nom du fichier en double : interdit, chaque fichier ne doit apparaître qu'une fois : L2, L4") > 0, "groupe doublons L2, L4")
+    TestControle = Fin() & vbLf & "--- Rapport ---" & vbLf & rap
     Exit Function
 Erreur:
     TestControle = ErreurExec()
@@ -194,7 +209,7 @@ Public Function TestDossier() As String
     etape = "Controler ws"
     Controler ws
     Call Verif(NbIssLigne(2, "") = 0, "nom présent")
-    Call Verif(A(3, 1, "missing", "Vouliez-vous dire « doc1.pdf »"), "nom absent + suggestion")
+    Call Verif(A(3, 1, "missing", "Vouliez-vous dire « doc1.pdf »"), "nom absent + suggestion [nbIss=" & nbIss & " dossier=" & wd.Range("A2").Value & "/" & wd.Name & "/" & FeuilleDossier(False).Range("A3").Value & "]")
     Call Verif(A(4, 1, "missing", "majuscules"), "différence de majuscules")
     Call Verif(A(5, 14, "missing", "") And Not A(5, 13, "missing", ""), "fichiers compagnons")
     etape = "wd.Cells.Clear"
@@ -305,4 +320,89 @@ Public Function TestImport() As String
     Exit Function
 Erreur:
     TestImport = ErreurExec()
+End Function
+
+' Colonne R : toujours 0 (export, lignes vides, import)
+Public Function TestColonneR() As String
+    On Error GoTo Erreur
+    Dim ws As Worksheet, t As String, lignesCsv As Variant, champs As Variant
+    Set ws = FeuilleTravail()
+    etape = "préparation"
+    ws.Range("A2:W2000").ClearContents
+    RemplirColonneR ws
+    Call Verif(ws.Range("R2").Value = 0 And ws.Range("R2000").Value = 0, "colonne R remplie de 0 (R2 à R2000)")
+    Call Verif(DerniereLigne(ws) = 1, "tableau vide malgré la colonne R remplie")
+    EcrireLigne ws, 2, "18=1"
+    Call Verif(Controler(ws) = 0 And nbRessources = 1, "1 ressource, aucune erreur (R ignorée par les contrôles)")
+    t = TexteCsv(ws)
+    lignesCsv = Split(t, vbCrLf)
+    champs = Split(lignesCsv(1), ChrW(164))
+    Call Verif(champs(17) = "0", "export : colonne R toujours 0 (" & champs(17) & ")")
+    Call Verif(UBound(lignesCsv) = 2, "export : une seule ressource, pas de ligne pour les autres 0 de la colonne R")
+    Dim lignes As Collection, sep As String, notes As String
+    Set lignes = LireCsv("Nom du fichier;b" & vbCrLf & "x.pdf;T;;;N;;;C;;image;ELE;1;;;;FR;0;1;;;;;" & vbCrLf, sep)
+    EcrireLignes ws, PreparerLignes(lignes, notes)
+    Call Verif(ws.Range("R2").Value = 0 And ws.Range("R3").Value = 0, "import : colonne R remise à 0")
+    TestColonneR = Fin()
+    Exit Function
+Erreur:
+    TestColonneR = ErreurExec()
+End Function
+
+Private Function CsvLigne(ByVal modifs As String) As String
+    Dim v(0 To 22) As String, m As Variant, p As Long
+    If modifs <> "" Then
+        For Each m In Split(modifs, "|")
+            p = InStr(m, "=")
+            v(CLng(Left$(m, p - 1)) - 1) = Mid$(m, p + 1)
+        Next m
+    End If
+    CsvLigne = Join(v, ";")
+End Function
+
+' Comparer le fichier et les ressources
+Public Function TestComparaison() As String
+    On Error GoTo Erreur
+    Dim txt As String, lignes As Collection, sep As String, notes As String, ws As Worksheet
+    Dim liste(1 To 6) As String, nM As Long, nT As Long, nA As Long
+    etape = "préparation"
+    txt = "Nom du fichier;Titre" & vbCrLf & CsvLigne("1=doc1.pdf|13=audio_ch1.mp3") & vbCrLf & CsvLigne("1=DOC2.PDF") & vbCrLf & _
+        CsvLigne("1=https://exemple.fr/x") & vbCrLf & CsvLigne("1=doc01.pdf") & vbCrLf & CsvLigne("1=mon fichier.pdf") & vbCrLf
+    Set lignes = PreparerLignes(LireCsv(txt, sep), notes)
+    liste(1) = "doc1.pdf": liste(2) = "doc2.pdf": liste(3) = "audio_ch1.mp3": liste(4) = "doc10.pdf": liste(5) = "mon fichier.pdf": liste(6) = "extra.mp4"
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets("TestComparaison")
+    On Error GoTo Erreur
+    If ws Is Nothing Then
+        Set ws = ThisWorkbook.Worksheets.Add
+        ws.Name = "TestComparaison"
+    End If
+    etape = "EcrireComparaison"
+    EcrireComparaison ws, lignes, liste, 6, "Dossier de test.", nM, nT, nA
+    Call Verif(lignes.Count = 5, "5 ressources lues")
+    Call Verif(nA = 5, "5 fichiers attendus (colonne A sans l'adresse web + 1 fichier associé) : " & nA)
+    Call Verif(nM = 2, "2 fichiers listés introuvables (DOC2.PDF, doc01.pdf) : " & nM)
+    Call Verif(nT = 2, "2 fichiers du dossier non listés (doc10.pdf, extra.mp4) : " & nT)
+    Call Verif(ws.Range("A4").Value Like "Différences : 2 fichiers listés introuvables*", "titre « Différences »")
+    Call Verif(ws.Range("B6").Value = 5 And InStr(ws.Range("C6").Value, "1 adresse web") > 0, "ressources listées et adresse web")
+    Call Verif(ws.Range("B8").Value = 6 And ws.Range("B9").Value = 1, "6 fichiers dans le dossier, écart 1")
+    Dim r As Long, trouveCasse As Boolean, trouveExtra As Boolean, trouveInterdit As Boolean
+    For r = 1 To 40
+        If ws.Cells(r, 1).Value = "DOC2.PDF" And InStr(ws.Cells(r, 4).Value, "doc2.pdf") > 0 Then trouveCasse = True
+        If ws.Cells(r, 1).Value = "extra.mp4" Then trouveExtra = True
+        If InStr(ws.Cells(r, 1).Value, "espace ou un accent") > 0 Then trouveInterdit = True
+    Next r
+    Call Verif(trouveCasse, "majuscules différentes signalées avec le bon nom")
+    Call Verif(trouveExtra, "fichier du dossier non listé affiché")
+    Call Verif(trouveInterdit, "nom avec espace signalé")
+    ' Cas où tout correspond
+    Dim liste2(1 To 2) As String
+    liste2(1) = "doc1.pdf": liste2(2) = "audio_ch1.mp3"
+    Set lignes = PreparerLignes(LireCsv("Nom du fichier;Titre" & vbCrLf & CsvLigne("1=doc1.pdf|13=audio_ch1.mp3") & vbCrLf, sep), notes)
+    EcrireComparaison ws, lignes, liste2, 2, "", nM, nT, nA
+    Call Verif(nM = 0 And nT = 0 And ws.Range("A4").Value Like "Le fichier et le dossier correspondent : 2 fichiers*", "fichier et dossier identiques [" & nM & "/" & nT & "/" & nA & "/" & ws.Range("A4").Value & "]")
+    TestComparaison = Fin()
+    Exit Function
+Erreur:
+    TestComparaison = ErreurExec()
 End Function
