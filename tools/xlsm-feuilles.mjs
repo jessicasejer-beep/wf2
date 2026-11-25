@@ -177,8 +177,8 @@ export function feuilleReadMe(S) {
   const etape = (a, b, c, ht = 30) => add([['B', a, S.celluleGras], ['C', b, S.cellule], ['D', c, S.celluleCentre]], ht);
   etape('1. Créer les lignes', 'Choisissez le dossier qui contient les fichiers à importer : une ligne par fichier est créée, avec le nom exact du fichier en colonne A.', 'Sélectionner un dossier de ressources');
   etape('2. Compléter', "Remplissez les colonnes : en-tête bleu = obligatoire, en-tête gris = facultatif. La colonne R se remplit seule (0) dès qu'une ligne contient des données. Valeurs possibles et pictos : onglet « AIDE ».", '—', 44);
-  etape('3. Contrôler', "Les cellules en erreur se colorent et portent une note (survolez-les). L'onglet « Contrôle » liste les erreurs par type.", 'Contrôler un fichier');
-  etape('4. Corriger', "Corrigez chaque cellule signalée, puis cliquez à nouveau sur « Contrôler un fichier », jusqu'à « Aucune erreur bloquante ».", 'Contrôler un fichier');
+  etape('3. Contrôler', "Les cellules en erreur se colorent et portent une note (survolez-les). L'onglet « Contrôle » liste les erreurs par type.", 'Contrôler ce fichier');
+  etape('4. Corriger', "Corrigez chaque cellule signalée, puis cliquez à nouveau sur « Contrôler ce fichier », jusqu'à « Aucune erreur bloquante ».", 'Contrôler ce fichier');
   etape('5. Exporter', "Enregistrez le fichier sous le nom exact import.csv, puis créez un .zip avec import.csv et tous les fichiers, sans sous-dossier.", 'Exporter import.csv');
   blanc();
   add([['B', 'Les autres boutons', S.section]], 22);

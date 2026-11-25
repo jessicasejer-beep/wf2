@@ -98,7 +98,7 @@ Public Sub LireDossier()
         EcrireNoms ws, PREMIERE_LIGNE, t, n
         Verifier False
         MsgBox "Dossier « " & chemin & " » : " & Pluriel(n, "fichier lu", "fichiers lus") & ", " & Pluriel(n, "ligne créée", "lignes créées") & " (une par fichier)." & infos & vbLf & vbLf & _
-            "Complétez maintenant le tableau, puis cliquez sur « Contrôler un fichier ».", vbInformation, "Sélectionner un dossier de ressources"
+            "Complétez maintenant le tableau, puis cliquez sur « Contrôler ce fichier ».", vbInformation, "Sélectionner un dossier de ressources"
     Else
         Dim absents As Variant, nAbs As Long, rep As VbMsgBoxResult
         absents = FichiersAbsents(ws, t, n, nAbs)
@@ -554,7 +554,7 @@ Private Function FeuilleControle() As Worksheet
     If ws Is Nothing Then
         Dim actif As Object
         Set actif = ActiveSheet
-        Set ws = ThisWorkbook.Worksheets.Add(After:=FeuilleTravail())
+        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))   ' à la fin : READ ME et AIDE restent 2e et 3e
         ws.Name = NOM_CONTROLE
         On Error Resume Next          ' mise en forme seulement
         ws.Tab.Color = RGB(192, 0, 0)
@@ -566,7 +566,7 @@ Private Function FeuilleControle() As Worksheet
         ws.Columns("C").WrapText = True
         ws.Columns("A:C").VerticalAlignment = xlTop
         ws.Rows("3:4").RowHeight = 18
-        AjouterBouton ws, "btnVerifier", "Contrôler un fichier", "Verifier", 4, RGB(11, 92, 173)
+        AjouterBouton ws, "btnVerifier", "Contrôler ce fichier", "Verifier", 4, RGB(11, 92, 173)
         AjouterBouton ws, "btnExporter", "Exporter import.csv", "ExporterCsv", 190, RGB(30, 123, 60)
         AjouterBouton ws, "btnRetour", "Retour au tableau", "RetourTableau", 365, RGB(90, 97, 112)
         If Not actif Is Nothing Then actif.Activate
@@ -677,7 +677,7 @@ Private Sub EcrireRapport()
     On Error GoTo 0
     ws.Range("A1").Value = "Contrôle de l'import"
     ws.Range("A1").Font.Size = 16: ws.Range("A1").Font.Bold = True
-    ws.Range("A2").Value = "Contrôlé " & MaintenantTexte() & ". Après vos corrections, cliquez à nouveau sur « Contrôler un fichier ». L = numéro de ligne dans l'onglet « " & wt.Name & " » ; cliquez sur un nombre pour aller à la première cellule concernée."
+    ws.Range("A2").Value = "Contrôlé " & MaintenantTexte() & ". Après vos corrections, cliquez à nouveau sur « Contrôler ce fichier ». L = numéro de ligne dans l'onglet « " & wt.Name & " » ; cliquez sur un nombre pour aller à la première cellule concernée."
     ws.Range("A2").Font.Color = RGB(86, 97, 112)
 
     r = 6

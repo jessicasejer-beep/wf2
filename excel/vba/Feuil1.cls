@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Une cellule corrigée perd sa couleur et sa note de contrôle (relancer « Contrôler un fichier » ensuite) ;
+' Une cellule corrigée perd sa couleur et sa note de contrôle (relancer « Contrôler ce fichier » ensuite) ;
 ' la colonne R reprend la valeur 0 si elle est modifiée.
 Private Sub Worksheet_Change(ByVal Target As Range)
     On Error Resume Next

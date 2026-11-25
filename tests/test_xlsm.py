@@ -38,7 +38,7 @@ def check(cond, label, extra=""):
 
 # --- Contenu du classeur livré ---------------------------------------------------------
 print("■ Classeur livré")
-z = zipfile.ZipFile(os.path.join(ROOT, "Fichier-de-travail-import-WF.xlsm"))
+z = zipfile.ZipFile(os.path.join(ROOT, "251126_fichier_d_import_WF.xlsm"))
 names = z.namelist()
 import re  # noqa: E402
 import xml.dom.minidom  # noqa: E402
@@ -54,7 +54,7 @@ ct = z.read("[Content_Types].xml").decode()
 check("xl/vbaProject.bin" in names, "projet VBA présent")
 check("macroEnabled.main+xml" in ct and 'Extension="bin"' in ct, "type de classeur avec macros")
 check("customUI/customUI.xml" in names and "ui/extensibility" in z.read("_rels/.rels").decode(), "onglet de ruban déclaré")
-check('activeTab="0"' in z.read("xl/workbook.xml").decode(), "onglet de travail actif à l'ouverture")
+check('activeTab="1"' in z.read("xl/workbook.xml").decode(), "classeur ouvert sur READ ME (2e onglet) ; la macro d'ouverture affiche le tableau s'il est rempli")
 check(sum(1 for n in names if n.startswith("xl/media/")) == 47, "images des pictos conservées")
 s1 = z.read("xl/worksheets/sheet1.xml").decode()
 check(s1.count("<dataValidation ") == 6 and s1.count("<conditionalFormatting") == 7, "listes déroulantes et couleurs du modèle conservées")
@@ -63,8 +63,8 @@ check('sqref="R2:R2000"' in s1 and 'COUNTA($A2:$Q2,$S2:$V2)' in s1 and '<c r="R1
 check('sqref="F2' not in s1, "colonne F facultative (aucune règle de couleur)")
 wb = z.read("xl/workbook.xml").decode()
 import re  # noqa: E402
-check(re.findall(r'<sheet name="([^"]+)"', wb) == ["READ ME", "SC_import_modele_V1", "AIDE"], "onglets : READ ME, tableau, AIDE (pictos regroupés dans AIDE)", re.findall(r'<sheet name="([^"]+)"', wb))
-check('<definedName name="picto">AIDE!$B$59:$B$105</definedName>' in wb and 'localSheetId="1"' in wb, "listes déroulantes reliées à l'onglet AIDE")
+check(re.findall(r'<sheet name="([^"]+)"', wb) == ["SC_import_modele_V1", "READ ME", "AIDE"], "onglets : tableau, READ ME, AIDE (pictos regroupés dans AIDE)", re.findall(r'<sheet name="([^"]+)"', wb))
+check('<definedName name="picto">AIDE!$B$59:$B$105</definedName>' in wb and 'localSheetId="0"' in wb, "listes déroulantes reliées à l'onglet AIDE")
 aide = z.read("xl/worksheets/sheet3.xml").decode()
 check('<c r="B59" s="' in aide and "<v>123</v>" in aide and ">aide</t>" in aide and ">video_classe</t>" in aide and ">ANONYME</t>" in aide, "onglet AIDE : pictos et listes")
 check(z.read("xl/drawings/drawing1.xml").decode().count("<xdr:oneCellAnchor>") == 47, "47 images de pictos dans l'onglet AIDE (dont « 123 »)")
@@ -72,11 +72,11 @@ check("drawing1.xml" in z.read("xl/worksheets/_rels/sheet3.xml.rels").decode(), 
 rm = z.read("xl/worksheets/sheet2.xml").decode()
 check("mode d&apos;emploi" in rm or "mode d'emploi" in rm, "onglet READ ME")
 ui = z.read("customUI/customUI.xml").decode()
-check('label="Sélectionner un dossier de ressources"' in ui and 'label="Vérifier un fichier"' in ui and 'label="Contrôler un fichier"' in ui and 'label="Comparer le fichier et les ressources"' in ui and "Copier" not in ui,
+check('label="Sélectionner un dossier de ressources"' in ui and 'label="Vérifier un fichier"' in ui and 'label="Contrôler ce fichier"' in ui and 'label="Comparer le fichier et les ressources"' in ui and "Copier" not in ui,
       "ruban : boutons renommés, comparaison ajoutée, copie du rapport retirée")
 from oletools.olevba import VBA_Parser  # noqa: E402
 
-vp = VBA_Parser(os.path.join(ROOT, "Fichier-de-travail-import-WF.xlsm"))
+vp = VBA_Parser(os.path.join(ROOT, "251126_fichier_d_import_WF.xlsm"))
 mods = sorted(name for (_, _, name, _) in vp.extract_macros())
 check(mods == sorted(["Actions.bas", "ApiWindows.bas", "Comparaison.bas", "Feuil1.cls", "Feuil3.cls", "Feuil4.cls", "Outils.bas", "Regles.bas", "ThisWorkbook.cls"]),
       "9 modules VBA relus par olevba", mods)

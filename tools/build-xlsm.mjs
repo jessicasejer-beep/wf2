@@ -21,7 +21,7 @@ const TEMPLATE = join(root, 'ref/Modele_Fichier-de-travail-import-WF_JL0926.xlsx
 // --tests <fichier> : variante de test (ajoute excel/vba-tests/TestsAuto.bas), pour tests/test_xlsm.py
 const testsIdx = process.argv.indexOf('--tests');
 const WITH_TESTS = testsIdx > 0;
-const OUT = WITH_TESTS ? process.argv[testsIdx + 1] : join(root, 'Fichier-de-travail-import-WF.xlsm');
+const OUT = WITH_TESTS ? process.argv[testsIdx + 1] : join(root, '251126_fichier_d_import_WF.xlsm');
 
 /* ---------- Encodage Windows-1252 ---------- */
 const CP1252_HIGH = [0x20AC, null, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, null, 0x017D, null,
@@ -281,10 +281,10 @@ const CUSTOM_UI = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <group id="grpDepart" label="1. Point de départ">
           ${btn('btnDossier', 'Sélectionner un dossier de ressources', 'FileOpen', "Choisir le dossier des fichiers à importer : une ligne par fichier, ou contrôle des noms si le tableau est déjà rempli.")}
           ${btn('btnImporter', 'Vérifier un fichier', 'ImportTextFile', "Charger un import.csv ou un fichier de travail Excel existant dans le tableau, puis le contrôler.")}
+          ${btn('btnComparer', 'Comparer le fichier et les ressources', 'ReviewCompareMenu', "Comparer un fichier d'import (Excel ou CSV) et un dossier de fichiers médias : même nombre de fichiers, noms identiques.")}
         </group>
         <group id="grpControle" label="2. Contrôle">
-          ${btn('btnVerifier', 'Contrôler un fichier', 'DataValidation', "Contrôler toutes les lignes : cellules en couleur avec une note, rapport dans l'onglet Contrôle.")}
-          ${btn('btnComparer', 'Comparer le fichier et les ressources', 'ReviewCompareMenu', "Comparer un fichier d'import (Excel ou CSV) et un dossier de fichiers médias : même nombre de fichiers, noms identiques.")}
+          ${btn('btnVerifier', 'Contrôler ce fichier', 'DataValidation', "Contrôler toutes les lignes : cellules en couleur avec une note, rapport dans l'onglet Contrôle.")}
         </group>
         <group id="grpExport" label="3. Export">
           ${btn('btnExporter', 'Exporter import.csv', 'FileSaveAs', "Enregistrer import.csv (séparateur ¤, Latin-1) s'il n'y a plus d'erreur bloquante.")}
@@ -327,20 +327,20 @@ zip.file('xl/worksheets/_rels/sheet3.xml.rels', zip.file('xl/worksheets/_rels/sh
 zip.file('xl/worksheets/_rels/sheet2.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>');   // READ ME : sans dessin
 zip.file('xl/drawings/drawing1.xml', dessinPictosAide(await zip.file('xl/drawings/drawing1.xml').async('string')));
 
-// Ordre des onglets : READ ME, tableau, AIDE ; plages nommées des listes déroulantes dans AIDE
+// Ordre des onglets : tableau, READ ME, AIDE ; plages nommées des listes déroulantes dans AIDE
 const plage = ([a, b]) => `AIDE!$B$${a}:$B$${b}`;
 let wbx = await zip.file('xl/workbook.xml').async('string');
-wbx = wbx.replace(/<sheets>[\s\S]*?<\/sheets>/, '<sheets><sheet name="READ ME" sheetId="2" r:id="rId2"/><sheet name="SC_import_modele_V1" sheetId="1" r:id="rId1"/><sheet name="AIDE" sheetId="3" r:id="rId3"/></sheets>');
+wbx = wbx.replace(/<sheets>[\s\S]*?<\/sheets>/, '<sheets><sheet name="SC_import_modele_V1" sheetId="1" r:id="rId1"/><sheet name="READ ME" sheetId="2" r:id="rId2"/><sheet name="AIDE" sheetId="3" r:id="rId3"/></sheets>');
 wbx = wbx.replace(/<definedNames>[\s\S]*?<\/definedNames>/, '<definedNames>'
-  + '<definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">SC_import_modele_V1!$A$1:$W$1</definedName>'
-  + '<definedName name="_xlnm.Print_Titles" localSheetId="1">SC_import_modele_V1!$1:$1</definedName>'
+  + '<definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">SC_import_modele_V1!$A$1:$W$1</definedName>'
+  + '<definedName name="_xlnm.Print_Titles" localSheetId="0">SC_import_modele_V1!$1:$1</definedName>'
   + `<definedName name="langue_v2">${plage(LISTES_AIDE.langue)}</definedName>`
   + `<definedName name="picto">${plage(LISTES_AIDE.picto)}</definedName>`
   + `<definedName name="profil">${plage(LISTES_AIDE.profil)}</definedName>`
   + `<definedName name="watermark">${plage(LISTES_AIDE.watermark)}</definedName>`
   + `<definedName name="zeroun">${plage(LISTES_AIDE.zeroun)}</definedName>`
   + '</definedNames>');
-wbx = wbx.replace(/activeTab="\d+"/, 'activeTab="0"');
+wbx = wbx.replace(/activeTab="\d+"/, 'activeTab="1"');            // ouverture sur READ ME (2e onglet)
 zip.file('xl/workbook.xml', wbx);
 zip.file('docProps/app.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>');
 

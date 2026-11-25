@@ -109,7 +109,7 @@ Private Function FeuilleComparaison() As Worksheet
     On Error GoTo 0
     If ws Is Nothing Then
         Set actif = ActiveSheet
-        Set ws = ThisWorkbook.Worksheets.Add(After:=FeuilleTravail())
+        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))   ' à la fin : READ ME et AIDE restent 2e et 3e
         ws.Name = NOM_FEUILLE
         On Error Resume Next          ' mise en forme seulement
         ws.Tab.Color = RGB(30, 123, 60)

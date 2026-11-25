@@ -1,6 +1,6 @@
 # Essai du classeur Excel avec macros
 
-Fichier à tester : `Fichier-de-travail-import-WF.xlsm` (à la racine du dépôt).
+Fichier à tester : `251126_fichier_d_import_WF.xlsm` (à la racine du dépôt).
 Matériel : les dossiers `excel/recette/Lot_essai/` et `excel/recette/Comparaison_essai/`, et l'exemple `ref/import.csv`.
 Durée : 20 minutes environ, sur un PC Windows avec Excel installé.
 
@@ -11,7 +11,7 @@ Excel : l'onglet du ruban, le choix des dossiers et fichiers, l'enregistrement d
 | # | Action | Résultat attendu | OK ? |
 |---|---|---|---|
 | 1 | Copier les dossiers d'essai et le `.xlsm` sur le PC. Ouvrir le `.xlsm`. | Si un bandeau rouge « Risque de sécurité » s'affiche : fermer Excel, clic droit sur le fichier → Propriétés → cocher « Débloquer » → OK, puis rouvrir. Cliquer sur « Activer le contenu » si demandé. Le classeur s'ouvre sur l'onglet **READ ME**. | |
-| 2 | Regarder les onglets et le ruban. | Onglets READ ME, SC_import_modele_V1, AIDE (plus d'onglet « pictos »). Onglet **Import WebFactory** du ruban avec 6 boutons : Sélectionner un dossier de ressources, Vérifier un fichier, Contrôler un fichier, Comparer le fichier et les ressources, Exporter import.csv, Supprimer les données. | |
+| 2 | Regarder les onglets et le ruban. | Onglets SC_import_modele_V1, READ ME (2e), AIDE (3e) ; plus d'onglet « pictos ». Les onglets Contrôle et Comparaison s'ajoutent à la fin. Onglet **Import WebFactory** du ruban avec 6 boutons : Sélectionner un dossier de ressources, Vérifier un fichier, Comparer le fichier et les ressources (groupe « 1. Point de départ »), Contrôler ce fichier, Exporter import.csv, Supprimer les données. | |
 | 3 | Onglet AIDE. | Liste des 23 colonnes, valeurs autorisées (profil, langue, 0/1, watermark), 47 pictos (dont « 123 ») avec leur image en face du nom. | |
 | 4 | Onglet SC_import_modele_V1, colonne R. | En-tête et cellules gris, **vides**. Taper un titre en B2 : R2 affiche 0. Effacer B2 : R2 redevient vide. Taper 1 dans R2 : Excel refuse (« Colonne automatique »). | |
 | 5 | **Sélectionner un dossier de ressources** → choisir `Lot_essai`. | Message : 9 fichiers lus, 9 lignes créées ; 1 fichier était dans un sous-dossier ; 2 fichiers système ignorés. Colonne A remplie, dans l'ordre doc1, doc2, doc10… | |
