@@ -8,7 +8,7 @@ Tableau kanban unique pour suivre tous vos projets en cours. Chaque projet a sa 
 
 - **Projets** : créer, modifier (nom, couleur, description), supprimer (avec ses tâches, confirmation + annulation possible). Barre d'avancement par projet.
 - **Tâches** : créer, modifier, dupliquer, supprimer (annulation possible). Champs : titre, projet, statut, priorité, échéance, description, étiquettes, sous-tâches.
-- **Kanban** : 3 colonnes : « À faire / En cours », « Bloqué / Attente validation » (motif affiché sur la carte), « Terminé / En prod », glisser-déposer entre colonnes et pour réordonner, ou menu « ⋯ › Déplacer vers ».
+- **Kanban** : 3 colonnes : À faire / En cours / Terminé ; tag rouge « BLOQUÉ » sur n'importe quelle carte (menu « ⋯ › Marquer BLOQUÉ » ou case dans la fiche, avec motif), glisser-déposer entre colonnes et pour réordonner, ou menu « ⋯ › Déplacer vers ».
 - **Archives** : « ⋯ › Archiver » range une tâche hors du tableau sans la supprimer ; bouton d'archivage groupé sur la colonne Terminé ; section Archives dans la barre latérale pour consulter, restaurer ou supprimer.
 - **Filtres** : par projet (clic ; Ctrl/⌘+clic pour en combiner plusieurs), priorité, échéance (en retard, aujourd'hui, 7 jours, sans date), recherche texte. Tri manuel / priorité / échéance.
 - **Indicateurs** : nombre de tâches, % d'avancement, priorités hautes ouvertes, tâches en retard (cliquable).

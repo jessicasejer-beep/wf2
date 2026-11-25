@@ -18,7 +18,7 @@
     --warn: #FFE66D; --warn-soft: #FFF6C7; --low-text: #6E5A00;
     --ok: #4ECDC4; --ok-soft: #DCF5F2; --ok-ink: #1B7F78;
     --medium-soft: #E4E8EC; --medium-ink: #292F36;
-    --col-todo: #292F36; --col-done: #4ECDC4; --col-blocked: #FF6B6B;
+    --col-todo: #292F36; --col-progress: #F2D54A; --col-done: #4ECDC4;
     --radius: 12px;
     color-scheme: light;
   }
@@ -131,6 +131,10 @@
   .pill.medium { background: var(--medium-soft); color: var(--medium-ink); }
   .pill.high { background: var(--danger-soft); color: var(--danger-ink); }
   .pill.done { background: var(--ok-soft); color: var(--ok-ink); }
+  .pill.blocked-pill { background: var(--danger-ink); color: #fff; letter-spacing: .04em; }
+  .card.is-blocked { box-shadow: 0 0 0 1.5px var(--danger), var(--shadow); }
+  .block-toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--danger-ink); cursor: pointer; }
+  .block-toggle input { width: 16px; height: 16px; accent-color: var(--danger); }
   .proj-pill { background: color-mix(in srgb, var(--pc) 24%, transparent); color: var(--text); }
   .card h3 { margin: 10px 0 4px; font-size: 15px; line-height: 1.3; }
   .card.is-done h3 { text-decoration: line-through; color: var(--muted); }
@@ -287,13 +291,16 @@
   // ================= Données =================
   const STORAGE_KEY = 'kanban-projets-v1';
   const COLUMNS = [
-    { id: 'todo', label: 'À faire / En cours', color: 'var(--col-todo)' },
-    { id: 'blocked', label: 'Bloqué / Attente validation', color: 'var(--col-blocked)' },
-    { id: 'done', label: 'Terminé / En prod', color: 'var(--col-done)' },
+    { id: 'todo', label: 'À faire', color: 'var(--col-todo)' },
+    { id: 'progress', label: 'En cours', color: 'var(--col-progress)' },
+    { id: 'done', label: 'Terminé', color: 'var(--col-done)' },
   ];
-  // Anciens statuts regroupés dans les 3 colonnes actuelles.
-  const STATUS_ALIAS = { progress: 'todo', preprod: 'blocked', prod: 'done' };
-  const migrateTask = (t) => (STATUS_ALIAS[t.status] ? { ...t, status: STATUS_ALIAS[t.status] } : t);
+  // Anciens statuts : « bloqué » et « preprod » deviennent « En cours » avec le tag BLOQUÉ.
+  function migrateTask(t) {
+    if (t.status === 'blocked' || t.status === 'preprod') return { ...t, status: 'progress', blocked: true };
+    if (t.status === 'prod') return { ...t, status: 'done' };
+    return t;
+  }
   const PRIORITIES = { high: 'Haute', medium: 'Moyenne', low: 'Basse' };
   const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
   const PALETTE = ['#4ECDC4', '#FF6B6B', '#FFE66D', '#5A6673', '#1A9E96', '#F4A259', '#7BDFF2', '#B388EB', '#E84A5F', '#9BC53D'];
@@ -320,7 +327,7 @@
           checklist: [{ id: uid(), text: 'Préparer le guide d\'entretien', done: true }, { id: uid(), text: 'Recruter 5 participants', done: false }, { id: uid(), text: 'Synthèse', done: false }] }),
         t(p2, 'Wireframes', 'todo', 'high', { description: 'Wireframes basse fidélité des écrans principaux.', dueDate: addDays(-1), tags: ['design'] }),
         t(p2, 'Illustrations onboarding', 'todo', 'low', { dueDate: addDays(5), tags: ['design'] }),
-        t(p3, 'Moodboard', 'blocked', 'medium', { description: 'Pistes visuelles pour la campagne.', tags: ['créa'] }),
+        t(p3, 'Moodboard', 'progress', 'medium', { description: 'Pistes visuelles pour la campagne.', tags: ['créa'], blocked: true, blockedReason: 'En attente de validation client' }),
         t(p2, 'Maquettes app mobile', 'done', 'medium', { tags: ['design'] }),
         t(p1, 'Design system', 'done', 'medium', { description: 'Adapter l\'UI à partir des composants existants.' }),
       ],
@@ -361,7 +368,7 @@
   }
 
   const ui = {
-    projectFilter: new Set(), search: '', priority: '', due: '', sort: 'manual', view: 'board',
+    projectFilter: new Set(), search: '', priority: '', due: '', sort: 'manual', view: 'board', blockedOnly: false,
   };
   const liveTasks = () => state.tasks.filter(t => !t.archived);
   const statusOf = (id) => COLUMNS.find(c => c.id === id) || COLUMNS[0];
@@ -479,6 +486,7 @@
   }
 
   function matchesFilters(task) {
+    if (ui.blockedOnly && !(task.blocked && task.status !== 'done')) return false;
     if (ui.projectFilter.size && !ui.projectFilter.has(task.projectId)) return false;
     if (ui.priority && task.priority !== ui.priority) return false;
     if (ui.search) {
@@ -550,7 +558,8 @@
     $('#priorityFilter').value = ui.priority;
     $('#dueFilter').value = ui.due;
     $('#sortSelect').value = ui.sort;
-    $('#resetFilters').hidden = !(ui.projectFilter.size || ui.priority || ui.due || ui.search);
+    $('#resetFilters').hidden = !(ui.projectFilter.size || ui.priority || ui.due || ui.search || ui.blockedOnly);
+    $('#resetFilters').textContent = ui.blockedOnly ? 'Effacer filtres (bloquées)' : 'Effacer filtres';
   }
 
   function renderStats() {
@@ -559,13 +568,13 @@
     const done = scope.filter(t => t.status === 'done').length;
     const overdue = scope.filter(t => t.dueDate && t.dueDate < todayISO() && t.status !== 'done').length;
     const high = scope.filter(t => t.priority === 'high' && t.status !== 'done').length;
-    const blocked = scope.filter(t => t.status === 'blocked').length;
+    const blocked = scope.filter(t => t.blocked && t.status !== 'done').length;
     const pct = scope.length ? Math.round(done / scope.length * 100) : 0;
     $('#stats').innerHTML = `
       <div class="stat"><div class="v">${scope.length}</div><div class="l">Tâches</div></div>
       <div class="stat"><div class="v">${pct}%</div><div class="l">Avancement (${done} terminées)</div></div>
       <div class="stat ${high ? 'danger' : ''}"><div class="v">${high}</div><div class="l">Priorité haute en cours</div></div>
-      <div class="stat ${blocked ? 'danger' : ''}"><div class="v">${blocked}</div><div class="l">Bloquées / en attente</div></div>
+      <div class="stat ${blocked ? 'danger' : ''}" ${blocked ? 'style="cursor:pointer" data-show-blocked title="Afficher les tâches bloquées"' : ''}><div class="v">${blocked}</div><div class="l">Bloquées</div></div>
       <div class="stat ${overdue ? 'danger' : ''}" ${overdue ? 'style="cursor:pointer" data-show-overdue title="Afficher les tâches en retard"' : ''}><div class="v">${overdue}</div><div class="l">En retard</div></div>`;
   }
 
@@ -577,15 +586,17 @@
     const prioPill = task.status === 'done'
       ? `<span class="pill done">Terminé</span>`
       : `<span class="pill ${task.priority}">${PRIORITIES[task.priority]}</span>`;
-    return `<article class="card ${task.status === 'done' ? 'is-done' : ''}" draggable="true" data-task="${task.id}" style="--pc:${p.color}">
+    const isBlocked = task.blocked && task.status !== 'done';
+    return `<article class="card ${task.status === 'done' ? 'is-done' : ''} ${isBlocked ? 'is-blocked' : ''}" draggable="true" data-task="${task.id}" style="--pc:${p.color}">
       <div class="card-top">
+        ${isBlocked ? '<span class="pill blocked-pill">BLOQUÉ</span>' : ''}
         ${prioPill}
         <span class="pill proj-pill">${esc(p.name)}</span>
         <button class="icon-btn" data-task-menu="${task.id}" title="Actions">${ICONS.dots}</button>
       </div>
       <h3>${esc(task.title)}</h3>
       ${task.description ? `<p>${esc(task.description)}</p>` : ''}
-      ${task.status === 'blocked' && task.blockedReason ? `<div class="blocked-note">${ICONS.block}<span>${esc(task.blockedReason)}</span></div>` : ''}
+      ${isBlocked && task.blockedReason ? `<div class="blocked-note">${ICONS.block}<span>${esc(task.blockedReason)}</span></div>` : ''}
       ${task.tags?.length ? `<div class="tags">${task.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
       ${(due || cl.length) ? `<div class="card-foot">
         ${due ? `<span class="meta ${due.cls}">${ICONS.cal}${esc(due.label)}</span>` : ''}
@@ -794,7 +805,8 @@
           <div class="field"><label for="tDue">Échéance</label><input type="date" id="tDue" value="${t.dueDate || ''}"></div>
         </div>
         <div class="field"><label>Statut</label><div class="seg" id="statusSeg">${statusSeg}</div></div>
-        <div class="field" id="blockedField" ${t.status === 'blocked' ? '' : 'hidden'}><label for="tBlocked">Motif (blocage ou validation attendue)</label><input type="text" id="tBlocked" maxlength="200" placeholder="En attente de validation client, accès manquant…" value="${esc(t.blockedReason || '')}"></div>
+        <div class="field"><label class="block-toggle" for="tIsBlocked"><input type="checkbox" id="tIsBlocked" ${t.blocked ? 'checked' : ''}>Tâche bloquée (tag rouge BLOQUÉ)</label></div>
+        <div class="field" id="blockedField" ${t.blocked ? '' : 'hidden'}><label for="tBlocked">Motif du blocage</label><input type="text" id="tBlocked" maxlength="200" placeholder="En attente de validation client, accès manquant…" value="${esc(t.blockedReason || '')}"></div>
         <div class="field"><label>Priorité</label><div class="seg" id="prioSeg">${prioSeg}</div></div>
         <div class="field"><label for="tDesc">Description</label><textarea id="tDesc" rows="3" placeholder="Détails, liens, notes…">${esc(t.description)}</textarea></div>
         <div class="field"><label for="tTags">Étiquettes</label><input type="text" id="tTags" placeholder="design, urgent, client… (séparées par des virgules)" value="${esc((t.tags || []).join(', '))}"></div>
@@ -820,7 +832,8 @@
         set(b.dataset[attr]);
         $(sel, modal).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
       });
-      segHandler('#statusSeg', 'status', v => { status = v; $('#blockedField', modal).hidden = v !== 'blocked'; });
+      segHandler('#statusSeg', 'status', v => status = v);
+      $('#tIsBlocked', modal).addEventListener('change', e => { $('#blockedField', modal).hidden = !e.target.checked; });
       segHandler('#prioSeg', 'prio', v => priority = v);
 
       const drawChecklist = () => {
@@ -854,7 +867,8 @@
           title, status, priority,
           projectId: $('#tProject', modal).value,
           dueDate: $('#tDue', modal).value,
-          blockedReason: status === 'blocked' ? $('#tBlocked', modal).value.trim() : '',
+          blocked: $('#tIsBlocked', modal).checked,
+          blockedReason: $('#tIsBlocked', modal).checked ? $('#tBlocked', modal).value.trim() : '',
           description: $('#tDesc', modal).value.trim(),
           tags: $('#tTags', modal).value.split(',').map(s => s.trim().replace(/^#/, '')).filter(Boolean),
           checklist: checklist.filter(c => c.text.trim()),
@@ -899,10 +913,18 @@
       <button data-act="dup">${ICONS.copy}Dupliquer</button>
       <button data-act="focus">${ICONS.filter}Filtrer sur ce projet</button>
       <hr><div class="menu-label">Déplacer vers</div>${moves}
-      <hr><button data-act="archive">${ICONS.archive}Archiver</button>
+      <hr><button data-act="block" ${t.blocked ? '' : 'class="danger"'}>${ICONS.block}${t.blocked ? 'Retirer le tag BLOQUÉ' : 'Marquer BLOQUÉ'}</button>
+      <button data-act="archive">${ICONS.archive}Archiver</button>
       <button data-act="del" class="danger">${ICONS.trash}Supprimer</button>`, {
       edit: () => taskModal(id), dup: () => duplicateTask(id), del: () => deleteTask(id),
       archive: () => archiveTasks([id]),
+      block: () => {
+        t.blocked = !t.blocked;
+        if (!t.blocked) t.blockedReason = '';
+        t.updatedAt = Date.now();
+        render();
+        if (t.blocked) toast('Tag BLOQUÉ ajouté. Ouvrez la carte pour préciser le motif.');
+      },
       move: (s) => moveTask(id, s),
       focus: () => { ui.projectFilter = new Set([t.projectId]); render(); },
     });
@@ -965,6 +987,7 @@
 
     if (el.closest('[data-new-project]')) return projectModal();
     if (el.closest('[data-show-overdue]')) { ui.due = 'overdue'; return render(); }
+    if (el.closest('[data-show-blocked]')) { ui.blockedOnly = true; return render(); }
 
     const card = el.closest('.card');
     if (card && !el.closest('button')) return taskModal(card.dataset.task);
@@ -988,7 +1011,7 @@
   $('#dueFilter').addEventListener('change', e => { ui.due = e.target.value; render(); });
   $('#sortSelect').addEventListener('change', e => { ui.sort = e.target.value; render(); });
   $('#resetFilters').addEventListener('click', () => {
-    ui.projectFilter.clear(); ui.priority = ''; ui.due = ''; ui.search = ''; $('#searchInput').value = ''; render();
+    ui.projectFilter.clear(); ui.priority = ''; ui.due = ''; ui.search = ''; ui.blockedOnly = false; $('#searchInput').value = ''; render();
   });
   $('#menuToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
 
