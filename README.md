@@ -44,7 +44,7 @@ s'affichent dans les onglets « Contrôle » et « Comparaison », et sur les ce
 | `excel/vba/*.bas`, `*.cls` | Code VBA (lisible, modifiable) |
 | `tools/build-xlsm.mjs`, `tools/xlsm-feuilles.mjs` | Construisent le `.xlsm` : modèle + code VBA + ruban + onglets READ ME et AIDE |
 | `excel/vba-tests/TestsAuto.bas` | Tests des règles (non livré dans le classeur) |
-| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (108 vérifications) |
+| `tests/test_xlsm.py` | Lance ces tests dans LibreOffice (111 vérifications) |
 | `excel/RECETTE.md` | Essai à faire dans Excel, avec les dossiers de `excel/recette/` |
 
 ```sh

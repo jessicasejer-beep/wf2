@@ -143,6 +143,8 @@ Public Function TestControle() As String
     etape = "EcrireLigne ws, 21, '1=p.pdf|2=T|22=800/600'"
     EcrireLigne ws, 21, "1=p.pdf|2=T|22=800/600"
     EcrireLigne ws, 22, "1=q.pdf|2=U|10=123"
+    EcrireLigne ws, 23, "1=diapo.ppsx|2=V|12=0"
+    EcrireLigne ws, 24, "1=diapo2.ppsx|2=W|12=1"
     etape = "Controler ws"
     Controler ws
 
@@ -167,7 +169,9 @@ Public Function TestControle() As String
     Call Verif(A(19, 1, "req", "") And A(19, 2, "req", "") And A(19, 10, "req", ""), "colonnes obligatoires vides")
     Call Verif(A(20, 9, "latin1", "Retapez le mot"), "caractère illisible dans un texte")
     Call Verif(NbIssLigne(21, "") = 0, "iFrame 800/600 accepté")
-    Call Verif(nbRessources = 21, "21 ressources comptées (" & nbRessources & ")")
+    Call Verif(nbRessources = 23, "23 ressources comptées (" & nbRessources & ")")
+    Call Verif(A(23, 12, "ppsx", "doit être 1 pour un fichier .ppsx"), "fichier .ppsx avec téléchargement à 0 : erreur bloquante")
+    Call Verif(NbIssLigne(24, "err") = 0, "fichier .ppsx avec téléchargement à 1 : accepté")
     Call Verif(NbIssLigne(22, "err") = 0, "picto « 123 » accepté")
     Call Verif(nbErreurs > 0 And nbAvertissements > 0, "totaux")
     Dim rap As String

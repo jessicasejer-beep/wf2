@@ -163,6 +163,10 @@ Private Sub EcrireNoms(ws As Worksheet, ByVal premiere As Long, t As Variant, By
     For i = 1 To n: arr(i, 1) = t(i): Next i
     Application.EnableEvents = False
     ws.Range(ws.Cells(premiere, 1), ws.Cells(premiere + n - 1, 1)).Value = arr
+    ' Fichier .ppsx : téléchargement autorisé à 1 d'office (à 0, il ne serait ni visible ni téléchargeable)
+    For i = 1 To n
+        If InStr(EXT_TELECHARGEMENT_OBLIGATOIRE, "|" & Extension(CStr(t(i))) & "|") > 0 Then ws.Cells(premiere + i - 1, COL_TELECHARGEMENT).Value = 1
+    Next i
     Application.EnableEvents = True
     MettreAJourColonneR ws, premiere, premiere + n - 1
 End Sub

@@ -6,6 +6,9 @@ Option Explicit
 Public Const NB_COL As Long = 23          ' colonnes A à W
 Public Const COL_UUID As Long = 23        ' W : toujours vide dans import.csv
 Public Const COL_METHODE As Long = 18     ' R : remplie automatiquement, toujours 0
+Public Const COL_TELECHARGEMENT As Long = 12   ' L : téléchargement autorisé (0/1)
+' Fichiers qui doivent être téléchargeables : à 0, ils ne peuvent être ni visualisés ni téléchargés
+Public Const EXT_TELECHARGEMENT_OBLIGATOIRE As String = "|ppsx|"
 Public Const PREMIERE_LIGNE As Long = 2
 Public Const DERNIERE_LIGNE_MAX As Long = 2000   ' le modèle est préparé jusqu'à la ligne 2000
 Public Const AUTEUR_NOTE As String = "Contrôle import"
@@ -224,6 +227,12 @@ Public Function Controler(ws As Worksheet) As Long
                     End If
                 End If
             Next c
+
+            ' Fichier .ppsx : le téléchargement doit être autorisé (sinon ni visualisation ni téléchargement)
+            If v(1) <> "" And v(COL_TELECHARGEMENT) = "0" And InStr(EXT_TELECHARGEMENT_OBLIGATOIRE, "|" & Extension(v(1)) & "|") > 0 Then
+                Ajouter r, COL_TELECHARGEMENT, "err", NomColonne(COL_TELECHARGEMENT) & " : doit être 1 pour un fichier ." & Extension(v(1)) & ". À 0, la ressource ne peut être ni visualisée ni téléchargée sur le site.", _
+                    "ppsx", "Fichier .ppsx avec téléchargement à 0 : mettre 1 (sinon la ressource n'est ni visible ni téléchargeable)"
+            End If
 
             ' Nom du fichier (colonne A)
             If v(1) <> "" Then

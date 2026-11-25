@@ -87,7 +87,7 @@ const COLONNES = [
   ['I', 'Description de la ressource', 'Non', 'Texte libre.', ''],
   ['J', 'Picto', 'Oui', 'Un nom de la liste des pictos (partie 3), écrit exactement, majuscules comprises.', 'image'],
   ['K', 'Profil', 'Oui', 'Un code de la liste « Profil » (partie 2).', 'ELE'],
-  ['L', 'Téléchargement autorisé', 'Oui', '0 (non) ou 1 (oui) : le chiffre zéro, pas la lettre O.', '1'],
+  ['L', 'Téléchargement autorisé', 'Oui', '0 (non) ou 1 (oui) : le chiffre zéro, pas la lettre O. Toujours 1 pour un fichier .ppsx (à 0, il ne peut être ni visualisé ni téléchargé).', '1'],
   ['M', 'Fichier audio description', 'Non', 'Nom d’un fichier .mp3 du dossier.', 'chap1_audio.mp3'],
   ['N', 'Fichier sous-titre', 'Non', 'Nom d’un fichier .vtt du dossier.', 'chap1_video.vtt'],
   ['O', 'Transcription', 'Non', 'Nom d’un fichier .pdf ou .doc du dossier.', 'chap1_transcription.pdf'],

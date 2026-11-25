@@ -5,7 +5,7 @@ Matériel : les dossiers `excel/recette/Lot_essai/` et `excel/recette/Comparaiso
 Durée : 20 minutes environ, sur un PC Windows avec Excel installé.
 
 Les règles de contrôle, l'import, l'export d'import.csv, la colonne R et la comparaison ont été testés
-automatiquement (108 vérifications, dans LibreOffice). Cet essai vérifie ce qui ne peut l'être que dans
+automatiquement (111 vérifications, dans LibreOffice). Cet essai vérifie ce qui ne peut l'être que dans
 Excel : l'onglet du ruban, le choix des dossiers et fichiers, l'enregistrement du fichier et l'affichage.
 
 | # | Action | Résultat attendu | OK ? |
