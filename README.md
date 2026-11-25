@@ -35,7 +35,7 @@ espaces de début et de fin supprimés). Colonnes de noms de fichiers (1, 13, 14
 pour les postes Windows avec Excel installé et macros autorisées. Onglets : **READ ME** (mode
 d'emploi), **SC_import_modele_V1** (le tableau ; colonne R automatique : 0 sur les lignes remplies) et **AIDE**
 (colonnes, valeurs autorisées, pictos avec leur image). L'onglet **Import WebFactory** du ruban
-regroupe les actions : Sélectionner un dossier de ressources, Vérifier un fichier, Vérifier,
+regroupe les actions : Sélectionner un dossier de ressources, Vérifier un fichier, Contrôler un fichier,
 Comparer le fichier et les ressources, Exporter import.csv, Supprimer les données. Les résultats
 s'affichent dans les onglets « Contrôle » et « Comparaison », et sur les cellules (couleur + note).
 

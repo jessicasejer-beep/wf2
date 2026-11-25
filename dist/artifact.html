@@ -470,8 +470,8 @@ const CSV_HEADER = [
   'Miniature vidéo (nom_du_fichier.jpg) - 310*220px', 'watermark sur la ressource (extrait, nouveau)',
   "Largeur/Hauteur de l'iFrame en pixels (L/H)", 'uuid'
 ];
-/* Onglet « pictos » A2:A47 (A1 contient la valeur numérique 123, hors liste). */
-const PICTOS = ['aide','anime_int','audio','audio_classe','bibliographie','biographie','BO','calculatrice_1',
+/* Onglet « pictos » du modèle, A1:A47 (« 123 » compris). */
+const PICTOS = ['123','aide','anime_int','audio','audio_classe','bibliographie','biographie','BO','calculatrice_1',
   'calculatrice_2','carte','carte_int','correction','dictee','DYS','eleve','espace','evaluation','expérience',
   'figure','frise','graphique','image','impression','jeux','karaoke','livre','microscope','molecule','musique',
   'orchestre','organigram','outils','outils_2','Peinture','photocopie','pouce','prof','site','tableau','test',
@@ -1951,7 +1951,7 @@ function loadPictoIcons() {
         const row = /<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/.exec(a);
         const emb = /r:embed="(rId\d+)"/.exec(a);
         if (!row || !emb) continue;
-        const pic = PICTOS[+row[1] - 1];  // ligne 0 = « 123 » (A1), ligne 1 = A2 = « aide »…
+        const pic = PICTOS[+row[1]];  // ligne 0 = A1 = « 123 », ligne 1 = A2 = « aide »…
         const file = relMap[emb[1]];
         if (!pic || !file || icons[pic]) continue;
         const blob = await zip.file('xl/media/' + file).async('blob');

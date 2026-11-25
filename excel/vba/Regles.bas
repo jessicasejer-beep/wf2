@@ -23,7 +23,7 @@ Public nbRessources As Long, nbErreurs As Long, nbAvertissements As Long, nbLign
 ' Listes de valeurs (onglets « pictos » et « AIDE » du modèle)
 ' ---------------------------------------------------------------------------------------------
 Public Function Pictos() As Variant
-    Pictos = Array("aide", "anime_int", "audio", "audio_classe", "bibliographie", "biographie", "BO", "calculatrice_1", _
+    Pictos = Array("123", "aide", "anime_int", "audio", "audio_classe", "bibliographie", "biographie", "BO", "calculatrice_1", _
         "calculatrice_2", "carte", "carte_int", "correction", "dictee", "DYS", "eleve", "espace", "evaluation", "expérience", _
         "figure", "frise", "graphique", "image", "impression", "jeux", "karaoke", "livre", "microscope", "molecule", "musique", _
         "orchestre", "organigram", "outils", "outils_2", "Peinture", "photocopie", "pouce", "prof", "site", "tableau", "test", _
@@ -212,7 +212,7 @@ Public Function Controler(ws As Worksheet) As Long
                             msg = NomColonne(c) & " : écrire exactement « " & sugg & " » (majuscules / minuscules)."
                             groupe = ValeurHorsListeGroupe(c)
                         ElseIf c = 10 Then
-                            sugg = PlusProche(v(c), Pictos1(), 46)
+                            sugg = PlusProche(v(c), Pictos1(), UBound(Pictos()) + 1)
                             msg = "Picto : « " & v(c) & " » n'est pas dans la liste des pictos."
                             If sugg <> "" Then msg = msg & " Vouliez-vous dire « " & sugg & " » ?" Else msg = msg & " Choisir dans le menu déroulant."
                             groupe = ValeurHorsListeGroupe(c)
@@ -344,7 +344,7 @@ Public Function Controler(ws As Worksheet) As Long
 End Function
 
 Private Function Pictos1() As Variant
-    ' même liste, indices 1 à 46 (pour PlusProche)
+    ' même liste, indices 1 à 47 (pour PlusProche)
     Dim p As Variant, t() As String, i As Long
     p = Pictos()
     ReDim t(1 To UBound(p) + 1)

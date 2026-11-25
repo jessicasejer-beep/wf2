@@ -64,15 +64,15 @@ check('sqref="F2' not in s1, "colonne F facultative (aucune règle de couleur)")
 wb = z.read("xl/workbook.xml").decode()
 import re  # noqa: E402
 check(re.findall(r'<sheet name="([^"]+)"', wb) == ["READ ME", "SC_import_modele_V1", "AIDE"], "onglets : READ ME, tableau, AIDE (pictos regroupés dans AIDE)", re.findall(r'<sheet name="([^"]+)"', wb))
-check('<definedName name="picto">AIDE!$B$59:$B$104</definedName>' in wb and 'localSheetId="1"' in wb, "listes déroulantes reliées à l'onglet AIDE")
+check('<definedName name="picto">AIDE!$B$59:$B$105</definedName>' in wb and 'localSheetId="1"' in wb, "listes déroulantes reliées à l'onglet AIDE")
 aide = z.read("xl/worksheets/sheet3.xml").decode()
-check('<c r="B59" s="' in aide and ">aide</t>" in aide and ">video_classe</t>" in aide and ">ANONYME</t>" in aide, "onglet AIDE : pictos et listes")
-check(z.read("xl/drawings/drawing1.xml").decode().count("<xdr:oneCellAnchor>") == 46, "46 images de pictos dans l'onglet AIDE")
+check('<c r="B59" s="' in aide and "<v>123</v>" in aide and ">aide</t>" in aide and ">video_classe</t>" in aide and ">ANONYME</t>" in aide, "onglet AIDE : pictos et listes")
+check(z.read("xl/drawings/drawing1.xml").decode().count("<xdr:oneCellAnchor>") == 47, "47 images de pictos dans l'onglet AIDE (dont « 123 »)")
 check("drawing1.xml" in z.read("xl/worksheets/_rels/sheet3.xml.rels").decode(), "dessin des pictos rattaché à AIDE")
 rm = z.read("xl/worksheets/sheet2.xml").decode()
 check("mode d&apos;emploi" in rm or "mode d'emploi" in rm, "onglet READ ME")
 ui = z.read("customUI/customUI.xml").decode()
-check('label="Sélectionner un dossier de ressources"' in ui and 'label="Vérifier un fichier"' in ui and 'label="Comparer le fichier et les ressources"' in ui and "Copier" not in ui,
+check('label="Sélectionner un dossier de ressources"' in ui and 'label="Vérifier un fichier"' in ui and 'label="Contrôler un fichier"' in ui and 'label="Comparer le fichier et les ressources"' in ui and "Copier" not in ui,
       "ruban : boutons renommés, comparaison ajoutée, copie du rapport retirée")
 from oletools.olevba import VBA_Parser  # noqa: E402
 

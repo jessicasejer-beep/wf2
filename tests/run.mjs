@@ -100,7 +100,7 @@ await section('Chargement de la page', async () => {
   ok(JSON.stringify(reqHead) === JSON.stringify([0, 1, 4, 7, 9, 10, 11, 15, 16, 17]), 'colonnes obligatoires en bleu (1,2,5,8,10,11,12,16,17,18)', reqHead);
   const hdr = await page.evaluate(() => window.__wf.CSV_HEADER.join('¤'));
   ok(Buffer.from(hdr, 'latin1').equals(exampleCsv.subarray(0, exampleCsv.indexOf(0x0d))), "en-tête CSV identique à l'exemple (octets)");
-  ok(await page.evaluate(() => window.__wf.PICTOS.length) === 46, '46 pictos');
+  ok(await page.evaluate(() => window.__wf.PICTOS.length) === 47, '47 pictos (dont « 123 »)');
   ok(await page.isDisabled('#bCsv'), 'bouton import.csv désactivé quand le tableau est vide');
   const noHScroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   ok(noHScroll, 'pas de défilement horizontal de la page (1366 px)');
@@ -374,7 +374,7 @@ await section('Saisie au clavier, collage depuis Excel, Ctrl+D, Suppr, annuler',
   await page.click('#c0_9');
   await page.keyboard.press('Alt+ArrowDown');
   ok(await page.isVisible('#popup'), 'liste déroulante (Alt+↓)');
-  ok(await page.locator('#popup .opt').count() === 46, '46 pictos dans la liste');
+  ok(await page.locator('#popup .opt').count() === 47, '47 pictos dans la liste');
   await page.waitForTimeout(400);
   ok(await page.locator('#popup .opt img').count() > 40, 'icônes des pictos (onglet « pictos » du modèle)', await page.locator('#popup .opt img').count());
   await page.keyboard.type('vid');

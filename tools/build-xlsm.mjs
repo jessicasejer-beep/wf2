@@ -283,7 +283,7 @@ const CUSTOM_UI = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
           ${btn('btnImporter', 'Vérifier un fichier', 'ImportTextFile', "Charger un import.csv ou un fichier de travail Excel existant dans le tableau, puis le contrôler.")}
         </group>
         <group id="grpControle" label="2. Contrôle">
-          ${btn('btnVerifier', 'Vérifier', 'DataValidation', "Contrôler toutes les lignes : cellules en couleur avec une note, rapport dans l'onglet Contrôle.")}
+          ${btn('btnVerifier', 'Contrôler un fichier', 'DataValidation', "Contrôler toutes les lignes : cellules en couleur avec une note, rapport dans l'onglet Contrôle.")}
           ${btn('btnComparer', 'Comparer le fichier et les ressources', 'ReviewCompareMenu', "Comparer un fichier d'import (Excel ou CSV) et un dossier de fichiers médias : même nombre de fichiers, noms identiques.")}
         </group>
         <group id="grpExport" label="3. Export">

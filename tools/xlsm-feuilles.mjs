@@ -69,7 +69,7 @@ function feuille({ codeName, largeurs, lignes, fusions = [], drawing = false, on
 }
 
 /* ---------- Contenu commun ---------- */
-export const PICTOS = ['aide', 'anime_int', 'audio', 'audio_classe', 'bibliographie', 'biographie', 'BO', 'calculatrice_1',
+export const PICTOS = ['123', 'aide', 'anime_int', 'audio', 'audio_classe', 'bibliographie', 'biographie', 'BO', 'calculatrice_1',
   'calculatrice_2', 'carte', 'carte_int', 'correction', 'dictee', 'DYS', 'eleve', 'espace', 'evaluation', 'expérience',
   'figure', 'frise', 'graphique', 'image', 'impression', 'jeux', 'karaoke', 'livre', 'microscope', 'molecule', 'musique',
   'orchestre', 'organigram', 'outils', 'outils_2', 'Peinture', 'photocopie', 'pouce', 'prof', 'site', 'tableau', 'test',
@@ -103,7 +103,7 @@ const COLONNES = [
 
 /* ---------- Onglet AIDE ---------- */
 // Positions des listes (plages nommées utilisées par les listes déroulantes du tableau)
-export const LISTES_AIDE = { profil: [32, 36], langue: [39, 46], zeroun: [49, 50], watermark: [53, 54], picto: [59, 104] };
+export const LISTES_AIDE = { profil: [32, 36], langue: [39, 46], zeroun: [49, 50], watermark: [53, 54], picto: [59, 105] };
 export const PREMIERE_LIGNE_PICTO = LISTES_AIDE.picto[0];
 
 export function feuilleAide(S) {
@@ -129,14 +129,14 @@ export function feuilleAide(S) {
   L.push({ r: p0 - 3, ht: 22, cellules: [['B', '3. Les pictos (col. J)', S.section]] });
   L.push({ r: p0 - 2, ht: 18, cellules: [['B', 'Saisissez le nom exact (majuscules comprises), ou choisissez-le dans la liste déroulante de la colonne J.', S.discret]] });
   L.push({ r: p0 - 1, ht: 18, cellules: [['B', 'Nom à saisir', S.entete], ['C', 'Picto', S.entete]] });
-  PICTOS.forEach((p, i) => L.push({ r: p0 + i, ht: 36, cellules: [['B', p, S.pictoNom], ['C', '', S.pictoImage]] }));
+  PICTOS.forEach((p, i) => L.push({ r: p0 + i, ht: 36, cellules: [['B', /^\d+$/.test(p) ? Number(p) : p, S.pictoNom], ['C', '', S.pictoImage]] }));
   return feuille({ codeName: 'Feuil3', largeurs: [2, 22, 34, 14, 62, 26], lignes: L, drawing: true, onglet: 'FF0070C0',
     fusions: ['B1:F1', 'B2:F2', `B${p0 - 2}:F${p0 - 2}`] });
 }
 
 // Images des pictos : déplacées de l'ancien onglet « pictos » vers la colonne C de l'onglet AIDE.
-// Dans le modèle, l'image de la ligne n (base 0) illustre le picto de la cellule A(n+1) ;
-// la ligne 0 (« 123 », hors liste) est retirée.
+// Dans le modèle, l'image de la ligne n (base 0) illustre le picto de la cellule A(n+1), soit PICTOS[n]
+// (« 123 » en premier).
 export function dessinPictosAide(drawingXml) {
   const tete = drawingXml.slice(0, drawingXml.indexOf('<xdr:twoCellAnchor'));
   const fin = '</xdr:wsDr>';
@@ -144,12 +144,12 @@ export function dessinPictosAide(drawingXml) {
   const out = [];
   for (const a of ancres) {
     const ligne = +/<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/.exec(a)[1];
-    if (ligne === 0 || ligne > PICTOS.length) continue;
+    if (ligne >= PICTOS.length) continue;
     const [, cx, cy] = /<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(a).map(Number);
     const h = 381000, w = Math.round(cx * h / cy);                 // 40 px de haut
     let pic = /<xdr:pic>[\s\S]*?<\/xdr:pic>/.exec(a)[0];
     pic = pic.replace(/<a:ext cx="\d+" cy="\d+"\/>/, `<a:ext cx="${w}" cy="${h}"/>`);
-    const rowAide = PREMIERE_LIGNE_PICTO - 1 + (ligne - 1);         // base 0
+    const rowAide = PREMIERE_LIGNE_PICTO - 1 + ligne;               // base 0
     out.push(`<xdr:oneCellAnchor><xdr:from><xdr:col>2</xdr:col><xdr:colOff>${Math.max(0, Math.round((34 * 7 * 9525 - w) / 2))}</xdr:colOff><xdr:row>${rowAide}</xdr:row><xdr:rowOff>28575</xdr:rowOff></xdr:from><xdr:ext cx="${w}" cy="${h}"/>${pic}<xdr:clientData/></xdr:oneCellAnchor>`);
   }
   return tete + out.join('') + fin;
@@ -177,8 +177,8 @@ export function feuilleReadMe(S) {
   const etape = (a, b, c, ht = 30) => add([['B', a, S.celluleGras], ['C', b, S.cellule], ['D', c, S.celluleCentre]], ht);
   etape('1. Créer les lignes', 'Choisissez le dossier qui contient les fichiers à importer : une ligne par fichier est créée, avec le nom exact du fichier en colonne A.', 'Sélectionner un dossier de ressources');
   etape('2. Compléter', "Remplissez les colonnes : en-tête bleu = obligatoire, en-tête gris = facultatif. La colonne R se remplit seule (0) dès qu'une ligne contient des données. Valeurs possibles et pictos : onglet « AIDE ».", '—', 44);
-  etape('3. Contrôler', "Les cellules en erreur se colorent et portent une note (survolez-les). L'onglet « Contrôle » liste les erreurs par type.", 'Vérifier');
-  etape('4. Corriger', "Corrigez chaque cellule signalée, puis cliquez à nouveau sur « Vérifier », jusqu'à « Aucune erreur bloquante ».", 'Vérifier');
+  etape('3. Contrôler', "Les cellules en erreur se colorent et portent une note (survolez-les). L'onglet « Contrôle » liste les erreurs par type.", 'Contrôler un fichier');
+  etape('4. Corriger', "Corrigez chaque cellule signalée, puis cliquez à nouveau sur « Contrôler un fichier », jusqu'à « Aucune erreur bloquante ».", 'Contrôler un fichier');
   etape('5. Exporter', "Enregistrez le fichier sous le nom exact import.csv, puis créez un .zip avec import.csv et tous les fichiers, sans sous-dossier.", 'Exporter import.csv');
   blanc();
   add([['B', 'Les autres boutons', S.section]], 22);
